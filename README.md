@@ -71,9 +71,15 @@ Even ring -> Cloudflare -> Even relay :8788 -> Wingman :8000
                                       DimOS MCP :9990 -> Go2
 ```
 
-Run the hidden-input configurator and paste a newly generated StepFun key plus
-the existing Go2 AES key. The resulting `.env` is ignored by Git and written
-with mode `600`:
+The launcher automatically prefers the active glasses relay at
+`/Users/wujiajun/Downloads/adx26/.worktrees/snake1-realtime-copilot/even` and
+does not modify that worktree. Its existing `RELAY_ACCESS_TOKEN` protects the
+public first hop, while `WINGMAN_SHARED_SECRET` protects Relay → Wingman.
+
+Run the hidden-input configurator and paste a newly generated Wingman StepFun
+key plus the existing Go2 AES key. It copies the already configured
+`WINGMAN_SHARED_SECRET` from the active Even `.env` without printing it. The
+resulting Wingman `.env` is ignored by Git and written with mode `600`:
 
 ```bash
 python scripts/configure_snake1.py
@@ -98,10 +104,11 @@ After the Go2 AP preflight passes, start the stationary DimOS MCP blueprint too:
 python scripts/start_snake1.py --with-go2
 ```
 
-The launcher prints the new temporary Cloudflare hostname and an ephemeral
-`/even/<token>` path. Use the complete tokenized URL as the ring forwarding
-endpoint. Both quick-tunnel hostnames and the token can change on every launch.
-The token keeps random Internet traffic from reaching the local hardware path.
+The launcher prints a temporary Cloudflare hostname. Add `/even` and use the
+active Even relay's existing access token in the phone console. Quick-tunnel
+hostnames can change on every launch. The glasses Relay remains the owner of
+StepAudio realtime sessions; Wingman uses `step-3.5-flash` only for Agent/tool
+planning, so the two backends do not duplicate the audio pipeline.
 
 Agent API:
 

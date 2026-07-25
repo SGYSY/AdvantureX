@@ -23,7 +23,6 @@ class Settings(BaseSettings):
     stepfun_realtime_url: str = "wss://api.stepfun.com/step_plan/v1/realtime"
     stepfun_audio_model: str = "stepaudio-2.5-realtime"
     dimos_mcp_url: str = "http://127.0.0.1:9990/mcp"
-    even_ingress_token: str = ""
 
 
 @lru_cache

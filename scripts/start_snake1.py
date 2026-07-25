@@ -7,7 +7,6 @@ import argparse
 import os
 from pathlib import Path
 import resource
-import secrets
 import shutil
 import signal
 import socket
@@ -76,6 +75,21 @@ def find_adx_root(start: Path) -> Path:
     raise RuntimeError("Could not find the adx26 root containing even/ and dimos/")
 
 
+def find_even_relay_root(adx_root: Path) -> Path:
+    override = os.environ.get("SNAKE1_EVEN_ROOT")
+    candidates = [
+        Path(override).expanduser() if override else None,
+        adx_root / ".worktrees" / "snake1-realtime-copilot" / "even",
+        adx_root / "even",
+    ]
+    for candidate in candidates:
+        if candidate and (candidate / "tools" / "relay-server.mjs").is_file():
+            return candidate
+    raise RuntimeError(
+        "Could not find the active Even relay. Set SNAKE1_EVEN_ROOT explicitly."
+    )
+
+
 def port_is_free(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         return sock.connect_ex(("127.0.0.1", port)) != 0
@@ -105,17 +119,29 @@ def raise_file_limit() -> int:
 def preflight(
     wingman_root: Path,
     adx_root: Path,
+    even_root: Path,
     with_go2: bool,
     with_tunnel: bool = True,
 ) -> list[str]:
     errors: list[str] = []
     env = {**read_env(wingman_root / ".env"), **os.environ}
+    even_env = read_env(even_root / ".env")
     if not env.get("STEPFUN_API_KEY"):
         errors.append("STEPFUN_API_KEY is missing from wingman/.env")
-    binaries = ["cloudflared"] if with_tunnel else []
+    binaries = ["npm"] + (["cloudflared"] if with_tunnel else [])
     for binary in binaries:
         if not shutil.which(binary):
             errors.append(f"Required binary not found: {binary}")
+    if not even_env.get("RELAY_ACCESS_TOKEN"):
+        errors.append("RELAY_ACCESS_TOKEN is missing from the active Even .env")
+    if not even_env.get("STEPFUN_API_KEY"):
+        errors.append("STEPFUN_API_KEY is missing from the active Even .env")
+    if not even_env.get("WINGMAN_SHARED_SECRET"):
+        errors.append("WINGMAN_SHARED_SECRET is missing from the active Even .env")
+    if env.get("WINGMAN_SHARED_SECRET") != even_env.get("WINGMAN_SHARED_SECRET"):
+        errors.append("Wingman and Even WINGMAN_SHARED_SECRET values do not match")
+    if even_env.get("FORWARD_URL") != "http://127.0.0.1:8000/api/v1/hardware/even":
+        errors.append("Active Even FORWARD_URL must target the local Wingman hardware endpoint")
     if with_go2:
         if env.get("ROBOT_IP", GO2_IP) != GO2_IP:
             errors.append(f"ROBOT_IP must be {GO2_IP} in AP mode")
@@ -150,12 +176,19 @@ def main() -> int:
 
     wingman_root = Path(__file__).resolve().parents[1]
     adx_root = find_adx_root(wingman_root)
+    even_root = find_even_relay_root(adx_root)
     python = adx_root / ".venv" / "bin" / "python"
     if not python.is_file():
         print(f"ERROR: Python environment not found: {python}", file=sys.stderr)
         return 2
 
-    errors = preflight(wingman_root, adx_root, args.with_go2, not args.no_tunnel)
+    errors = preflight(
+        wingman_root,
+        adx_root,
+        even_root,
+        args.with_go2,
+        not args.no_tunnel,
+    )
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
@@ -176,8 +209,7 @@ def main() -> int:
     nofile = raise_file_limit()
     print(f"File descriptor soft limit: {nofile}")
     child_env = {**read_env(wingman_root / ".env"), **os.environ}
-    ingress_token = secrets.token_urlsafe(24)
-    child_env["EVEN_INGRESS_TOKEN"] = ingress_token
+    even_child_env = {**os.environ, **read_env(even_root / ".env")}
     children: list[subprocess.Popen] = []
     stop_requested = False
     children_stopped = False
@@ -201,13 +233,10 @@ def main() -> int:
             child_env,
         ),
         (
-            "Secure Even ingress",
-            [str(python), str(wingman_root / "scripts/even_ingress.py")],
-            wingman_root,
-            {
-                **child_env,
-                "PORT": "8788",
-            },
+            "Even realtime relay",
+            ["npm", "run", "relay"],
+            even_root,
+            even_child_env,
         ),
     ]
     if args.with_go2:
@@ -261,9 +290,10 @@ def main() -> int:
         )
 
     print("Wingman: http://127.0.0.1:8000")
-    print(f"Even local ingress: http://127.0.0.1:8788/even/{ingress_token}")
+    print(f"Even realtime relay: {even_root}")
+    print("Even local ingress: http://127.0.0.1:8788/even")
     if not args.no_tunnel:
-        print(f"Append /even/{ingress_token} to the trycloudflare hostname.")
+        print("Append /even to the trycloudflare hostname and use the existing relay access token.")
     if not args.with_go2:
         print("Go2 was NOT started. Re-run with --with-go2 after the AP check passes.")
 

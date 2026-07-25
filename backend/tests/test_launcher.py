@@ -1,7 +1,8 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from scripts.start_snake1 import go2_route_is_safe
-from scripts.even_ingress import valid_ingress_path
+from scripts.start_snake1 import find_even_relay_root, go2_route_is_safe
 from scripts.configure_snake1 import update_env_text
 
 
@@ -13,10 +14,15 @@ class LauncherSafetyTest(unittest.TestCase):
         self.assertFalse(go2_route_is_safe("192.168.12.42", "en0", "utun6", True))
         self.assertFalse(go2_route_is_safe("192.168.12.42", "en0", "en0", False))
 
-    def test_public_ring_ingress_requires_unguessable_path_token(self):
-        self.assertTrue(valid_ingress_path("/even/secret-token", "secret-token"))
-        self.assertFalse(valid_ingress_path("/even", "secret-token"))
-        self.assertFalse(valid_ingress_path("/even/wrong", "secret-token"))
+    def test_prefers_the_active_realtime_copilot_relay(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            active = root / ".worktrees/snake1-realtime-copilot/even"
+            fallback = root / "even"
+            for candidate in (active, fallback):
+                (candidate / "tools").mkdir(parents=True)
+                (candidate / "tools/relay-server.mjs").touch()
+            self.assertEqual(find_even_relay_root(root), active)
 
     def test_configurator_updates_secrets_without_dropping_other_settings(self):
         result = update_env_text(

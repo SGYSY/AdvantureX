@@ -7,6 +7,11 @@ from getpass import getpass
 import os
 from pathlib import Path
 
+try:
+    from .start_snake1 import find_adx_root, find_even_relay_root, read_env
+except ImportError:
+    from start_snake1 import find_adx_root, find_even_relay_root, read_env
+
 
 def update_env_text(text: str, updates: dict[str, str]) -> str:
     remaining = dict(updates)
@@ -26,6 +31,9 @@ def update_env_text(text: str, updates: dict[str, str]) -> str:
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
+    adx_root = find_adx_root(root)
+    even_root = find_even_relay_root(adx_root)
+    even_values = read_env(even_root / ".env")
     env_path = root / ".env"
     template_path = root / ".env.example"
     current = (
@@ -47,9 +55,13 @@ def main() -> int:
         "STEPFUN_API_KEY": stepfun_key or current_values.get("STEPFUN_API_KEY", ""),
         "UNITREE_AES_128_KEY": aes_key
         or current_values.get("UNITREE_AES_128_KEY", ""),
+        "WINGMAN_SHARED_SECRET": even_values.get("WINGMAN_SHARED_SECRET", ""),
     }
     if not updates["STEPFUN_API_KEY"]:
         print("No StepFun key saved; run this configurator again with a rotated key.")
+        return 2
+    if not updates["WINGMAN_SHARED_SECRET"]:
+        print("Active Even .env has no WINGMAN_SHARED_SECRET; configure it first.")
         return 2
 
     env_path.write_text(update_env_text(current, updates))
