@@ -4,7 +4,7 @@ import uuid
 from datetime import timedelta
 from .adapters import PhoneAdapter, PhotonAdapter
 from .config import Settings
-from .models import DemoCallState, DemoCallStatus, DemoCallTrigger, EvenRelayPayload, Rescue, RescueCreate, Status, VoiceReply
+from .models import DemoCallState, DemoCallStatus, DemoCallTrigger, EvenRelayPayload, Rescue, RescueCreate, Status, VoiceReply, ZiloRingEvent
 from .store import Store, now
 
 DEFAULT_MESSAGE = "Wingman reminder: you requested a private check-in. Reply 取消 to stop, 延后 30 秒 to delay, or 电话 to request a call."
@@ -176,6 +176,32 @@ class Orchestrator:
             self.store.log("demo.call_ringing", "Wingman incoming-call screen is ringing", self.demo_call.rescue_id)
         except asyncio.CancelledError:
             return
+
+    async def zilo_ring_gesture(self, payload: ZiloRingEvent) -> dict[str, object]:
+        """Start the owner-only Photon pipeline from a local HMM gesture."""
+        self.store.log(
+            "zilo.ring_gesture",
+            f"{payload.gesture} confidence={payload.confidence:.3f}",
+        )
+        if payload.confidence < 0.70:
+            return {
+                "ok": True,
+                "accepted": False,
+                "reason": "Gesture confidence is below 0.70.",
+            }
+        try:
+            call = await self.trigger_fixed_demo(
+                call_delay_seconds=10,
+                source=f"zilo.{payload.gesture}",
+            )
+        except RuntimeError as exc:
+            return {"ok": False, "accepted": False, "reason": str(exc)}
+        return {
+            "ok": True,
+            "accepted": True,
+            "call_id": call.id,
+            "ring_at": call.ring_at,
+        }
 
     def get_demo_call(self) -> DemoCallState:
         return self.demo_call

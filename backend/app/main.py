@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from .config import Settings, get_settings
-from .models import AppState, DemoCallState, DemoCallTrigger, EvenRelayPayload, InboundMessage, Rescue, RescueCreate, VoiceReply, VoiceTurn, ZiloEvent
+from .models import AppState, DemoCallState, DemoCallTrigger, EvenRelayPayload, InboundMessage, Rescue, RescueCreate, VoiceReply, VoiceTurn, ZiloEvent, ZiloRingEvent
 from .orchestrator import Orchestrator
 from .store import Store
 
@@ -106,6 +106,18 @@ async def even_ring_relay(payload: EvenRelayPayload, request: Request):
         raise HTTPException(403, "The Even relay must run locally on this Mac.")
     try:
         return await orchestrator.even_ring_event(payload)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/api/v1/hardware/zilo")
+async def zilo_ring_relay(payload: ZiloRingEvent, request: Request):
+    # Gesture recognition runs on this Mac next to the BLE ring. Keeping this
+    # endpoint loopback-only prevents public callers from sending owner messages.
+    if request.client is None or request.client.host not in {"127.0.0.1", "::1"}:
+        raise HTTPException(403, "The Zilo ring recognizer must run locally on this Mac.")
+    try:
+        return await orchestrator.zilo_ring_gesture(payload)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
