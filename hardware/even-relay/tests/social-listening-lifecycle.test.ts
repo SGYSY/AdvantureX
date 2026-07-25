@@ -11,6 +11,9 @@ describe('stopGlassesAudio', () => {
 
     await expect(stopGlassesAudio({ audioControl, sleep, retryDelayMs: 1 })).resolves.toEqual({ stopped: true, attempts: 3 })
     expect(audioControl).toHaveBeenCalledTimes(3)
+    expect(audioControl).toHaveBeenNthCalledWith(1, false)
+    expect(audioControl).toHaveBeenNthCalledWith(2, false)
+    expect(audioControl).toHaveBeenNthCalledWith(3, false)
     expect(sleep).toHaveBeenCalledTimes(2)
   })
 

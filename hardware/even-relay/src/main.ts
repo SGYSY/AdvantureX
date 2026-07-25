@@ -571,7 +571,7 @@ function clearSocialListeningTimer() {
 async function stopSocialMicrophone() {
   if (!bridge) return false
   const result = await stopGlassesAudio({
-    audioControl: () => bridge!.audioControl(false, AudioInputSource.Glasses),
+    audioControl: bridge.audioControl.bind(bridge),
   })
   return result.stopped
 }
