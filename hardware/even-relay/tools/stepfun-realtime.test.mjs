@@ -56,6 +56,35 @@ test('connects through the AdventureX Step Plan realtime endpoint', async () => 
   assert.equal(authorization, 'Bearer test-key')
 })
 
+test('can bind StepFun traffic to a physical interface and real DNS result', async () => {
+  const socket = new FakeSocket()
+  let socketOptions
+  const session = new StepFunRealtimeSession({
+    apiKey: 'test-key',
+    resolvedIp: '14.103.2.83',
+    localAddress: '30.201.216.193',
+    socketFactory: (_url, options) => {
+      socketOptions = options
+      return socket
+    },
+    timeoutMs: 1000,
+  })
+
+  const started = session.start()
+  socket.emit('open')
+  emitSessionReady(socket)
+  await started
+
+  assert.equal(socketOptions.localAddress, '30.201.216.193')
+  const result = await new Promise((resolve, reject) => {
+    socketOptions.lookup('api.stepfun.com', {}, (error, address, family) => {
+      if (error) reject(error)
+      else resolve({ address, family })
+    })
+  })
+  assert.deepEqual(result, { address: '14.103.2.83', family: 4 })
+})
+
 test('allows StepAudio enough time to complete its reasoning response', () => {
   const session = new StepFunRealtimeSession({
     apiKey: 'test-key',

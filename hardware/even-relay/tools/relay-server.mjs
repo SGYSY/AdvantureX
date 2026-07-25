@@ -15,6 +15,8 @@ export function createRelayServer({
   stepfunApiKey = process.env.STEPFUN_API_KEY ?? '',
   stepfunModel = process.env.STEPFUN_MODEL ?? 'stepaudio-2.5-realtime',
   stepfunRealtimeUrl = process.env.STEPFUN_REALTIME_URL ?? 'wss://api.stepfun.com/step_plan/v1/realtime',
+  stepfunResolvedIp = process.env.STEPFUN_RESOLVED_IP ?? '',
+  stepfunLocalAddress = process.env.STEPFUN_LOCAL_ADDRESS ?? '',
   sessionStore,
 } = {}) {
   const configuredAccessToken = accessToken.trim()
@@ -24,6 +26,8 @@ export function createRelayServer({
           apiKey: stepfunApiKey,
           model: stepfunModel,
           baseUrl: stepfunRealtimeUrl,
+          resolvedIp: stepfunResolvedIp,
+          localAddress: stepfunLocalAddress,
         }),
       })
     : null)

@@ -6,6 +6,8 @@ export class StepFunRealtimeSession {
     apiKey,
     model = 'stepaudio-2.5-realtime',
     baseUrl = 'wss://api.stepfun.com/step_plan/v1/realtime',
+    resolvedIp = '',
+    localAddress = '',
     timeoutMs = 60_000,
     socketFactory,
   }) {
@@ -13,6 +15,8 @@ export class StepFunRealtimeSession {
     this.apiKey = apiKey
     this.model = model
     this.baseUrl = baseUrl
+    this.resolvedIp = resolvedIp.trim()
+    this.localAddress = localAddress.trim()
     this.timeoutMs = timeoutMs
     this.socketFactory = socketFactory
     this.socket = null
@@ -31,13 +35,18 @@ export class StepFunRealtimeSession {
     if (this.socket) return Promise.reject(new Error('StepFun session is already started'))
     return new Promise((resolve, reject) => {
       const url = `${this.baseUrl}?model=${encodeURIComponent(this.model)}`
+      const connectionOptions = {
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+        ...(this.localAddress ? { localAddress: this.localAddress } : {}),
+        ...(this.resolvedIp ? {
+          lookup: (_hostname, _options, callback) => {
+            callback(null, this.resolvedIp, this.resolvedIp.includes(':') ? 6 : 4)
+          },
+        } : {}),
+      }
       const socket = this.socketFactory
-        ? this.socketFactory(url, {
-            headers: { Authorization: `Bearer ${this.apiKey}` },
-          })
-        : new WebSocket(url, {
-            headers: { Authorization: `Bearer ${this.apiKey}` },
-          })
+        ? this.socketFactory(url, connectionOptions)
+        : new WebSocket(url, connectionOptions)
       this.socket = socket
       this.startResolve = resolve
       this.startReject = reject
