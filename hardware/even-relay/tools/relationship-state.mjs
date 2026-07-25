@@ -7,20 +7,20 @@ const SCORE_KEYS = [
   'opportunity',
   'confidence',
 ]
-const TREND_TEMPLATES = {
-  warming: '互动正在升温',
-  stable: '互动较稳定',
-  cooling: '互动有些变淡',
-  awkward: '现在有些冷场',
-}
-export const SUGGESTION_TEMPLATES = {
-  ask_open_question: '问一个开放问题',
-  acknowledge_and_listen: '先回应，再认真听',
-  share_briefly: '简短分享一点',
-  change_topic_gently: '温和换个话题',
-  give_space: '停一下，留点空间',
-  end_politely: '礼貌结束对话',
-}
+const TREND_TEMPLATES = new Map([
+  ['warming', '互动正在升温'],
+  ['stable', '互动较稳定'],
+  ['cooling', '互动有些变淡'],
+  ['awkward', '现在有些冷场'],
+])
+export const SUGGESTION_TEMPLATES = new Map([
+  ['ask_open_question', '问一个开放问题'],
+  ['acknowledge_and_listen', '先回应，再认真听'],
+  ['share_briefly', '简短分享一点'],
+  ['change_topic_gently', '温和换个话题'],
+  ['give_space', '停一下，留点空间'],
+  ['end_politely', '礼貌结束对话'],
+])
 
 // Defense in depth for legacy or non-conforming provider fields. The primary
 // boundary is the suggestion-code allowlist above; model text is never rendered.
@@ -45,8 +45,8 @@ export function parseRelationshipState(text, observedAt = Date.now()) {
     value.reason,
   ].filter(item => typeof item === 'string').join('\n')
   const unsafe = UNSAFE_PATTERN.test(safetyText)
-  const actionTemplate = SUGGESTION_TEMPLATES[value.suggestion_code]
-  const trendTemplate = TREND_TEMPLATES[value.trend]
+  const actionTemplate = SUGGESTION_TEMPLATES.get(value.suggestion_code)
+  const trendTemplate = TREND_TEMPLATES.get(value.trend)
   const confidence = unsafe ? 0 : value.confidence
   const confident = confidence >= 0.65 && Boolean(actionTemplate && trendTemplate)
   return {

@@ -75,6 +75,17 @@ test('fails closed for missing, unknown, or natural-language suggestion codes', 
   }
 })
 
+test('fails closed for Object.prototype suggestion codes', () => {
+  for (const suggestionCode of ['constructor', 'toString', 'valueOf', '__proto__']) {
+    const state = parseRelationshipState(JSON.stringify({
+      ...base,
+      suggestion_code: suggestionCode,
+    }), 1_000)
+    assert.equal(state.trend, 'unknown', suggestionCode)
+    assert.deepEqual(state.suggestion, [], suggestionCode)
+  }
+})
+
 test('suppresses low-confidence or unknown-trend advice', () => {
   for (const patch of [{ confidence: 0.4 }, { trend: 'unknown' }]) {
     const state = parseRelationshipState(JSON.stringify({ ...base, ...patch }), 1_000)
