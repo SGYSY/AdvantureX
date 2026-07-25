@@ -2,7 +2,7 @@
 
 **Wake your Personal Agent from the real world. Let it return to the real world and help.**
 
-[中文](README.zh.md) · [Live UI preview](https://sgysy.github.io/AdvantureX/) · Submission branch: `final`
+[中文](README.zh.md) · Submission branch: `final`
 
 SNAKE1 is a platform prototype designed to let a Personal Agent be triggered by
 physical-world signals and act through authorized real-world tools. A ring gesture, a short
@@ -157,8 +157,6 @@ Open:
 
 - Dashboard: <http://127.0.0.1:8000>
 - Mobile rescue screen: <http://127.0.0.1:8000/mobile>
-- Static UI preview: <https://sgysy.github.io/AdvantureX/>
-
 With empty provider credentials, message delivery remains clearly marked as
 `demo`; orchestration, timing, cancellation, UI, and audit behavior still run
 locally.

@@ -2,7 +2,7 @@
 
 **现实世界唤醒 Agent，Agent 回到现实世界帮你。**
 
-[English](README.md) · [在线界面预览](https://sgysy.github.io/AdvantureX/) · 提交分支：`final`
+[English](README.md) · 提交分支：`final`
 
 SNAKE1 是一个平台原型，目标是让 Personal Agent 能被现实触发，并通过被授权
 的现实工具采取行动。一次戒指手势、一段短时声音或一个明确动作成为 **Input**；Agent
@@ -144,8 +144,6 @@ uvicorn app.main:app --app-dir backend --reload
 
 - 控制面板：<http://127.0.0.1:8000>
 - 手机救场页面：<http://127.0.0.1:8000/mobile>
-- 静态界面预览：<https://sgysy.github.io/AdvantureX/>
-
 当 Provider 凭据为空时，消息投递会明确显示为 `demo`；编排、时序、取消、
 界面和审计仍然可以在本地完整运行。
 
