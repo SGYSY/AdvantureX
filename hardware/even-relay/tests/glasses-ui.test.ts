@@ -28,6 +28,17 @@ describe('formatGlassesFrame', () => {
     })
   })
 
+  it('keeps actionable capture and connection failures visible', () => {
+    expect(formatGlassesFrame({ kind: 'no_audio' })).toEqual({
+      content: '未听到声音\n↑ 上滑重试',
+      durationMs: 0,
+    })
+    expect(formatGlassesFrame({ kind: 'error' })).toEqual({
+      content: '连接失败\n↑ 上滑重试',
+      durationMs: 0,
+    })
+  })
+
   it('renders advice as at most two lines for ten seconds', () => {
     expect(formatGlassesFrame({
       kind: 'advice',
@@ -116,6 +127,18 @@ describe('social analysis result frame', () => {
       kind: 'advice',
       lines: ['互动正在升温', '先回应，再认真听'],
     })
+  })
+
+  it('maps an empty glasses capture to the persistent retry frame', async () => {
+    const glassesUi = await import('../src/glasses-ui')
+    const frameForFailure = (
+      glassesUi as unknown as Record<string, unknown>
+    ).frameForSocialFailure
+
+    expect(frameForFailure).toBeTypeOf('function')
+    expect((frameForFailure as (error: unknown) => unknown)(
+      new Error('No glasses audio received'),
+    )).toEqual({ kind: 'no_audio' })
   })
 })
 

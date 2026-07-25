@@ -40,6 +40,38 @@ describe('SocialCopilotController', () => {
     }
   })
 
+  it('batches short G2 PCM frames before sending them through the relay', async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ok: true,
+        id: 'session-1',
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ok: true,
+        insight: {
+          suggestion: ['认真听她说完', '再问一个细节'],
+          expiresAt: Date.now() + 600_000,
+        },
+      }), { status: 200 }))
+    const controller = new SocialCopilotController({
+      eventEndpoint: 'https://relay.example/even',
+      fetcher,
+    })
+
+    await controller.start()
+    controller.appendPcm(new Uint8Array([1, 2]))
+    controller.appendPcm(new Uint8Array([3, 4]))
+    controller.appendPcm(new Uint8Array([5, 6]))
+    await controller.finish()
+
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(JSON.parse(fetcher.mock.calls[1][1].body as string)).toEqual({
+      seq: 0,
+      pcmBase64: 'AQIDBAUG',
+    })
+  })
+
   it('does not upload PCM outside an active session', () => {
     const fetcher = vi.fn()
     const controller = new SocialCopilotController({
@@ -48,6 +80,26 @@ describe('SocialCopilotController', () => {
     })
     controller.appendPcm(new Uint8Array([1, 2]))
     expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('cancels instead of asking StepFun to analyze an empty capture', async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ok: true,
+        id: 'session-1',
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const controller = new SocialCopilotController({
+      eventEndpoint: 'https://relay.example/even',
+      fetcher,
+    })
+
+    await controller.start()
+    await expect(controller.finish()).rejects.toThrow('No glasses audio received')
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      'https://relay.example/social/session/start',
+      'https://relay.example/social/session/session-1/cancel',
+    ])
   })
 
   it('defers endpoint validation until a session starts', () => {
@@ -162,6 +214,7 @@ describe('SocialCopilotController', () => {
     let finishSignal: AbortSignal | null = null
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, id: 'session-1' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockImplementationOnce((_url: string, init: RequestInit) => {
         finishSignal = init.signal ?? null
         return new Promise<Response>(resolve => {
@@ -175,14 +228,15 @@ describe('SocialCopilotController', () => {
 
     try {
       await controller.start()
+      controller.appendPcm(new Uint8Array([1, 2]))
       const result = controller.finish().then(
         value => ({ value, error: null }),
         error => ({ value: null, error }),
       )
-      for (let attempt = 0; attempt < 10 && fetcher.mock.calls.length < 2; attempt += 1) {
+      for (let attempt = 0; attempt < 10 && fetcher.mock.calls.length < 3; attempt += 1) {
         await Promise.resolve()
       }
-      expect(fetcher).toHaveBeenCalledTimes(2)
+      expect(fetcher).toHaveBeenCalledTimes(3)
       vi.advanceTimersByTime(10_000)
       await Promise.resolve()
 

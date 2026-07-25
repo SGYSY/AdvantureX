@@ -4,6 +4,7 @@ export type GlassesFrame =
   | { kind: 'thinking' }
   | { kind: 'ready' }
   | { kind: 'rescue' }
+  | { kind: 'no_audio' }
   | { kind: 'error' }
   | { kind: 'empty' }
   | { kind: 'advice'; lines: string[] }
@@ -57,7 +58,8 @@ export function formatGlassesFrame(frame: GlassesFrame) {
   if (frame.kind === 'thinking') return { content: '○', durationMs: 0 }
   if (frame.kind === 'ready') return { content: '▲', durationMs: 2000 }
   if (frame.kind === 'rescue') return { content: '■ 已收到', durationMs: 6000 }
-  if (frame.kind === 'error') return { content: '□', durationMs: 2000 }
+  if (frame.kind === 'no_audio') return { content: '未听到声音\n↑ 上滑重试', durationMs: 0 }
+  if (frame.kind === 'error') return { content: '连接失败\n↑ 上滑重试', durationMs: 0 }
   if (frame.kind === 'empty') return { content: '▼ 上滑', durationMs: 2000 }
   const lines = frame.lines
     .flatMap(line => line.split(/\r\n|[\r\n]/))
@@ -76,6 +78,11 @@ export function frameForSocialInsight(
 ): GlassesFrame {
   const lines = insight?.suggestion.filter(line => typeof line === 'string' && line.trim()) ?? []
   return lines.length ? { kind: 'advice', lines } : { kind: 'blank' }
+}
+
+export function frameForSocialFailure(error: unknown): GlassesFrame {
+  const message = error instanceof Error ? error.message : String(error)
+  return message === 'No glasses audio received' ? { kind: 'no_audio' } : { kind: 'error' }
 }
 
 export function createGlassesFramePresenter({ render, timers = window }: GlassesFramePresenterOptions) {

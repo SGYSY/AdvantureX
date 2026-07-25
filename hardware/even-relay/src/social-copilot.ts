@@ -34,6 +34,9 @@ export class SocialCopilotController {
   private baseUrl: string | null = null
   private sessionId: string | null = null
   private seq = 0
+  private capturedAudioBytes = 0
+  private pendingAudio: number[] = []
+  private audioBatchTimer: ReturnType<typeof setTimeout> | null = null
   private queue: Promise<void> = Promise.resolve()
   private firstChunkError: Error | null = null
   private startPromise: Promise<void> | null = null
@@ -99,6 +102,9 @@ export class SocialCopilotController {
       this.baseUrl = baseUrl
       this.sessionId = body.id
       this.seq = 0
+      this.capturedAudioBytes = 0
+      this.pendingAudio = []
+      this.clearAudioBatchTimer()
       this.queue = Promise.resolve()
       this.firstChunkError = null
       this.cancelling = false
@@ -118,9 +124,23 @@ export class SocialCopilotController {
 
   appendPcm(bytes: Uint8Array) {
     if (!this.active || !this.sessionId || !this.baseUrl || bytes.byteLength === 0) return
+    this.capturedAudioBytes += bytes.byteLength
+    for (const byte of bytes) this.pendingAudio.push(byte)
+    if (this.audioBatchTimer === null) {
+      this.audioBatchTimer = setTimeout(() => {
+        this.audioBatchTimer = null
+        this.flushPendingAudio()
+      }, 250)
+    }
+  }
+
+  private flushPendingAudio() {
+    if (!this.active || !this.sessionId || !this.baseUrl || this.pendingAudio.length === 0) return
     const sessionId = this.sessionId
     const baseUrl = this.baseUrl
     const seq = this.seq++
+    const bytes = new Uint8Array(this.pendingAudio)
+    this.pendingAudio = []
     const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('')
     const pcmBase64 = btoa(binary)
     this.queue = this.queue.then(async () => {
@@ -143,6 +163,8 @@ export class SocialCopilotController {
 
   async finish(): Promise<SocialInsight | null> {
     if (!this.active || !this.sessionId || !this.baseUrl) return this.latestInsight
+    this.clearAudioBatchTimer()
+    this.flushPendingAudio()
     const sessionId = this.sessionId
     const baseUrl = this.baseUrl
     const generation = this.currentGeneration
@@ -150,6 +172,7 @@ export class SocialCopilotController {
     this._state = 'finishing'
 
     try {
+      if (this.capturedAudioBytes === 0) throw new Error('No glasses audio received')
       await this.awaitQueue()
       if (this.firstChunkError) throw this.firstChunkError
       const response = await this.request(
@@ -177,6 +200,7 @@ export class SocialCopilotController {
     this._state = 'idle'
     this.generation += 1
     this.cancelling = true
+    this.clearPendingAudio()
     this.abortInFlight()
     if (!sessionId || !baseUrl) return
     try {
@@ -243,6 +267,17 @@ export class SocialCopilotController {
 
   private abortInFlight() {
     for (const controller of this.inFlight) controller.abort()
+  }
+
+  private clearAudioBatchTimer() {
+    if (this.audioBatchTimer !== null) clearTimeout(this.audioBatchTimer)
+    this.audioBatchTimer = null
+  }
+
+  private clearPendingAudio() {
+    this.clearAudioBatchTimer()
+    this.pendingAudio = []
+    this.capturedAudioBytes = 0
   }
 }
 

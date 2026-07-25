@@ -18,6 +18,7 @@ import { RescueSequenceRecognizer } from './gesture-sequence'
 import {
   createCheckedGlassesWriter,
   createGlassesFramePresenter,
+  frameForSocialFailure,
   frameForSocialInsight,
   getGlassesPageLayout,
   type GlassesFrame,
@@ -560,7 +561,7 @@ async function finishSocialListening() {
   } catch (error) {
     console.warn('Social analysis failed:', error)
     if (socialCopilot === controller && run === socialListeningRun) {
-      await showGlassesFrame({ kind: 'error' })
+      await showGlassesFrame(frameForSocialFailure(error))
     }
   } finally {
     await resetSocialListening(controller, run, true)
