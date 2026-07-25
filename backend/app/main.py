@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import secrets
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -11,6 +12,7 @@ from .store import Store
 
 
 settings = get_settings()
+compare_secret = secrets.compare_digest
 store = Store(settings.database_path)
 orchestrator = Orchestrator(store, settings)
 
@@ -28,7 +30,7 @@ if cors_origins:
         CORSMiddleware,
         allow_origins=cors_origins,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Wingman-Key"],
+        allow_headers=["Content-Type", "X-Wingman-Key", "X-Wingman-Secret"],
     )
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
@@ -99,9 +101,20 @@ async def trigger_fixed_demo():
 
 
 @app.post("/api/v1/hardware/even")
-async def even_ring_relay(payload: EvenRelayPayload, request: Request):
-    # The phone WebView posts to the local relay; only that loopback relay may
-    # reach this endpoint without the private dashboard API key.
+async def even_ring_relay(
+    payload: EvenRelayPayload,
+    request: Request,
+    x_wingman_secret: str | None = Header(default=None),
+):
+    configured_secret = settings.wingman_shared_secret.strip()
+    if not configured_secret:
+        raise HTTPException(503, "WINGMAN_SHARED_SECRET is not configured.")
+    provided_secret = x_wingman_secret or ""
+    if not compare_secret(
+        provided_secret.encode("utf-8"),
+        configured_secret.encode("utf-8"),
+    ):
+        raise HTTPException(403, "Invalid X-Wingman-Secret.")
     if request.client is None or request.client.host not in {"127.0.0.1", "::1"}:
         raise HTTPException(403, "The Even relay must run locally on this Mac.")
     try:

@@ -54,8 +54,11 @@ cold-start a direct message to a phone number or Apple ID.
    ```env
    USER_PHONE_NUMBER=+8613812345678
    PHOTON_BRIDGE_URL=http://127.0.0.1:8787
-   WINGMAN_SHARED_SECRET=use-a-long-local-random-value
+   WINGMAN_SHARED_SECRET=
    ```
+
+   Generate a long random local value and fill it after copying the example;
+   keep the committed placeholder empty.
 
 2. In `snakeone/.env`, keep the Photon-generated `PROJECT_ID` and
    `PROJECT_SECRET`, then add the exact same `WINGMAN_SHARED_SECRET` and:
@@ -153,11 +156,20 @@ public HTTPS host instead of a temporary tunnel.
 ## Device integration endpoints
 
 - `POST /api/v1/events/zilo` — ring gateway; send `{"kind":"double_tap"}`
+- `POST /api/v1/hardware/even` — loopback-only Even relay gateway
 - `POST /api/v1/voice/turn` — viaim / headset text turn
 - `POST /api/v1/photon/inbound` — bridge webhook for incoming iMessages
 - `POST /api/v1/rescues` — create a rescue from any client
 
 All endpoints use `X-Wingman-Key` when `API_KEY` is set. For a browser deployment, place the API behind an authenticated gateway; do not expose a production API key in client-side code.
+
+The Even hardware gateway has a separate fail-closed boundary. Set a non-empty
+`WINGMAN_SHARED_SECRET` in this repository's root `.env`, set the same local
+value in the Even relay environment, and run the relay on `127.0.0.1:8788`.
+The relay sends `X-Wingman-Secret`; Wingman returns `503` when its secret is
+unconfigured, `403` for a wrong secret or non-loopback caller, and only then
+processes the event. Do not put this server-to-server secret in the Even phone
+UI.
 
 ## Safety model
 
