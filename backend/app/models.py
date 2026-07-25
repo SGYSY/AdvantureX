@@ -52,6 +52,15 @@ class ZiloEvent(BaseModel):
     device_id: str | None = Field(default=None, max_length=120)
 
 
+class ZiloRingEvent(BaseModel):
+    """Gesture recognized locally from the Zilo ring's BLE IMU stream."""
+
+    schema: Literal["zilo-ring/v1"]
+    gesture: str = Field(min_length=1, max_length=120)
+    confidence: float = Field(ge=0.0, le=1.0)
+    device_id: str | None = Field(default=None, max_length=120)
+
+
 class VoiceTurn(BaseModel):
     transcript: str = Field(min_length=1, max_length=500)
     conversation_id: str | None = None
