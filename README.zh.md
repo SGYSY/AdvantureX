@@ -14,7 +14,7 @@ Demo 只有消息/来电路径。
 > 你最需要帮助，却恰好最不方便掏出屏幕的时候。
 
 <p align="center">
-  <img src="docs/assets/snake1-mobile-rescue.png" width="720" alt="SNAKE1 Wingman 手机救场来电">
+  <img src="docs/assets/ringring-call-screen.jpg" width="390" alt="Wingman 私人助理救场来电界面">
 </p>
 
 <p align="center"><em>Wingman 是 SNAKE1 的第一个 Real-World Skill：消息先到，救场来电随后出现。</em></p>

@@ -16,7 +16,7 @@ paths are part of the current closed-loop demo.
 > when taking out a screen is exactly what you cannot do.
 
 <p align="center">
-  <img src="docs/assets/snake1-mobile-rescue.png" width="720" alt="SNAKE1 Wingman mobile rescue call">
+  <img src="docs/assets/ringring-call-screen.jpg" width="390" alt="Wingman incoming rescue call screen">
 </p>
 
 <p align="center"><em>Wingman is SNAKE1's first Real-World Skill: message first, rescue call second.</em></p>
