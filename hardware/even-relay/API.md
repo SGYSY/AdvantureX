@@ -273,9 +273,27 @@ Even Hub SDK 提供原始 PCM（`audioEvent.audioPcm`，`Uint8Array`），而非
 
 单个会话累计解码数据最多 640,000 字节。Relay 不将 PCM 写入磁盘，并会在 `finish`、会话过期或任意失败后清除内存中的原始数据。
 
+Provider 的结构化结果只使用分数、`trend`、内部 `topic` 与
+`suggestion_code`。允许的 code 为：
+
+```text
+ask_open_question
+acknowledge_and_listen
+share_briefly
+change_topic_gently
+give_space
+end_politely
+```
+
+模型不提供可显示的建议文案。Relay 只把合法 code 和
+`warming|stable|cooling|awkward` 映射为固定中文两行模板。未知或缺失
+code、`unknown` trend、低于 `0.65` 的置信度均 fail closed 为
+`trend: "unknown"`、`suggestion: []`。旧自由文本字段只参与
+defense-in-depth 检查，绝不会进入公开响应的 `suggestion` 或 G2 显示。
+
 ### 6.5.3 完成会话 → `POST /social/session/{id}/finish`
 
-结束采集、请求实时模型分析，并返回最新 insight。首个 PCM 后 15 秒是严格音频上传截止线，`finish` 额外允许 2 秒无音频收尾；超过宽限会话会被关闭并删除。若音频不足或 Provider 不可用，Relay 返回受控的 `422` 错误；公开响应中不包含凭证、原始 PCM 或内部 `reason` 诊断。
+结束采集、请求实时模型分析，并返回最新 insight。首个 PCM 后 15 秒是严格音频上传截止线，`finish` 额外允许 2 秒无音频收尾；超过宽限会话会被关闭并删除。若音频不足，Provider 返回 `suggestion_code: null`；Provider 不可用时 Relay 返回受控的 `422` 错误。公开响应中不包含凭证、原始 PCM 或内部 `reason` 诊断，G2 只消费 Relay 固定模板生成的 `suggestion`。
 
 ### 6.5.4 取消会话 → `POST /social/session/{id}/cancel`
 

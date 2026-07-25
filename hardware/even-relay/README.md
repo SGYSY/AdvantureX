@@ -90,6 +90,13 @@ Relay 转发到 Wingman 时会发送 `X-Wingman-Secret`。Wingman 必须配置�
 
 社交会话路由为 `start`、`chunk`、`finish`、`cancel`。最近建议只保存在 Even 客户端内存中，下滑只读取本地结果，不存在公网读取最新建议的接口。
 
+StepFun 只选择一个安全 `suggestion_code`，不会生成可显示的建议文本。
+Relay 仅接受
+`ask_open_question`、`acknowledge_and_listen`、`share_briefly`、
+`change_topic_gently`、`give_space`、`end_politely`，并把合法 code 与
+trend 映射成后端固定中文模板。未知/缺失 code、低置信度或不安全旧字段
+一律返回 `trend: unknown` 和空建议；G2 不渲染模型的 topic、reason 或旧自由文本字段。
+
 ## Pack for distribution
 
 ```bash

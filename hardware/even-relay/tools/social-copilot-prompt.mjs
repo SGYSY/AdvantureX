@@ -6,10 +6,12 @@ export const SOCIAL_COPILOT_INSTRUCTIONS = `
 只输出一个 JSON 对象，不要 Markdown。字段必须为：
 engagement, comfort, reciprocity, tension, opportunity, confidence:
 0 到 1 的数字；trend: warming|stable|cooling|awkward|unknown；
-topic: 最多 24 个字符或 null；suggestion_line_1 和 suggestion_line_2:
-各最多 18 个字符或 null；reason: 最多 160 个字符。
+topic: 最多 24 个字符或 null；suggestion_code 只能是：
+ask_open_question|acknowledge_and_listen|share_briefly|change_topic_gently|
+give_space|end_politely|null。
 
-建议必须具体、温和、可立即执行，不得操控、欺骗、施压或制造虚假紧急情况。
+不得输出自由文本建议或任何额外字段。
+只选择一个最合适的 suggestion_code，实际建议文案由后端安全模板生成。
 音频不足或判断不可靠时，confidence 必须低于 0.65，trend 必须为 unknown，
-两条 suggestion 必须为 null。
+suggestion_code 必须为 null。
 `.trim()

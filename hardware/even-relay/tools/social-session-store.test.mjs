@@ -34,9 +34,7 @@ test('keeps chunk order and discards a finished session', async () => {
       confidence: 0.8,
       trend: 'stable',
       topic: '展览',
-      suggestion_line_1: '她提到了展览',
-      suggestion_line_2: '问问最喜欢哪一件',
-      reason: '话题有连续回应',
+      suggestion_code: 'ask_open_question',
     }),
     close() {},
   }
@@ -135,9 +133,7 @@ function validInsight() {
     confidence: 0.8,
     trend: 'stable',
     topic: '展览',
-    suggestion_line_1: '她提到了展览',
-    suggestion_line_2: '问问最喜欢哪一件',
-    reason: '话题有连续回应',
+    suggestion_code: 'ask_open_question',
   }
 }
 
@@ -435,9 +431,7 @@ test('cancel is idempotent and wins a finish race without publishing insight', a
     confidence: 0.8,
     trend: 'stable',
     topic: '展览',
-    suggestion_line_1: '她提到了展览',
-    suggestion_line_2: '问问最喜欢哪一件',
-    reason: '话题有连续回应',
+    suggestion_code: 'ask_open_question',
   }))
 
   await assert.rejects(finishing, /cancelled/)
