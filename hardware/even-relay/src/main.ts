@@ -21,7 +21,10 @@ import {
   getGlassesPageLayout,
   type GlassesFrame,
 } from './glasses-ui'
-import { stopGlassesAudio } from './social-listening-lifecycle'
+import {
+  finishAfterBestEffortAudioStop,
+  stopGlassesAudio,
+} from './social-listening-lifecycle'
 import {
   routeSocialGesture,
   hasUsableSocialInsight,
@@ -544,12 +547,13 @@ async function finishSocialListening() {
   const run = socialListeningRun
   socialListeningState = 'finishing'
   clearSocialListeningTimer()
-  let microphoneStopped = false
   try {
-    microphoneStopped = await stopSocialMicrophone()
-    if (!microphoneStopped) throw new Error('Glasses microphone did not stop')
     await showGlassesFrame({ kind: 'thinking' })
-    const insight = await controller.finish()
+    const insight = await finishAfterBestEffortAudioStop({
+      stopAudio: stopSocialMicrophone,
+      finish: () => controller.finish(),
+      waitForMinimum: () => new Promise(resolve => window.setTimeout(resolve, 1200)),
+    })
     if (socialCopilot !== controller || run !== socialListeningRun) return
     latestSocialInsight = insight
     await showGlassesFrame(hasUsableSocialInsight(insight) ? { kind: 'ready' } : { kind: 'blank' })
@@ -559,7 +563,7 @@ async function finishSocialListening() {
       await showGlassesFrame({ kind: 'error' })
     }
   } finally {
-    await resetSocialListening(controller, run, microphoneStopped)
+    await resetSocialListening(controller, run, true)
   }
 }
 
@@ -579,18 +583,18 @@ async function stopSocialMicrophone() {
 async function retrySocialMicrophoneStop() {
   socialListeningState = 'stopping'
   const stopped = await stopSocialMicrophone()
-  socialListeningState = stopped ? 'idle' : 'error'
+  socialListeningState = 'idle'
   if (stopped) setForwardStatus('眼镜麦克风已停止')
-  else setForwardStatus('眼镜麦克风停止失败；请再次上滑重试')
+  else setForwardStatus('已发送眼镜麦克风停止命令')
 }
 
 async function resetSocialListening(
   controller: SocialCopilotController,
   run: number,
-  microphoneStopped = false,
+  microphoneStopAttempted = false,
 ) {
   clearSocialListeningTimer()
-  const stopped = microphoneStopped || await stopSocialMicrophone()
+  if (!microphoneStopAttempted) await stopSocialMicrophone()
   try {
     await controller.cancel()
   } catch (error) {
@@ -598,8 +602,7 @@ async function resetSocialListening(
   }
   if (socialCopilot === controller && run === socialListeningRun) {
     socialCopilot = null
-    socialListeningState = stopped ? 'idle' : 'error'
-    if (!stopped) setForwardStatus('眼镜麦克风停止失败；请再次上滑重试')
+    socialListeningState = 'idle'
   }
 }
 

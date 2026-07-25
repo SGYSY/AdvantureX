@@ -14,6 +14,11 @@ class FakeSocket extends EventEmitter {
   close() { this.emit('close') }
 }
 
+function emitSessionReady(socket) {
+  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  socket.emit('message', JSON.stringify({ type: 'session.updated' }))
+}
+
 async function startSession(socket, timeoutMs = 1000) {
   const session = new StepFunRealtimeSession({
     apiKey: 'test-key',
@@ -22,7 +27,7 @@ async function startSession(socket, timeoutMs = 1000) {
   })
   const started = session.start()
   socket.emit('open')
-  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  emitSessionReady(socket)
   await started
   return session
 }
@@ -42,13 +47,46 @@ test('connects through the AdventureX Step Plan realtime endpoint', async () => 
   })
   const started = session.start()
   socket.emit('open')
-  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  emitSessionReady(socket)
   await started
   assert.equal(
     requestedUrl,
     'wss://api.stepfun.com/step_plan/v1/realtime?model=stepaudio-2.5-realtime',
   )
   assert.equal(authorization, 'Bearer test-key')
+})
+
+test('allows StepAudio enough time to complete its reasoning response', () => {
+  const session = new StepFunRealtimeSession({
+    apiKey: 'test-key',
+    socketFactory: () => new FakeSocket(),
+  })
+
+  assert.equal(session.timeoutMs, 60_000)
+})
+
+test('disables VAD and waits for the session update acknowledgement', async () => {
+  const socket = new FakeSocket()
+  const session = new StepFunRealtimeSession({
+    apiKey: 'test-key',
+    socketFactory: () => socket,
+    timeoutMs: 1000,
+  })
+  let ready = false
+  const started = session.start().then(() => {
+    ready = true
+  })
+
+  socket.emit('open')
+  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  const update = socket.sent.find(event => event.type === 'session.update')
+  assert.equal(update.session.turn_detection, null)
+  await Promise.resolve()
+  assert.equal(ready, false)
+
+  socket.emit('message', JSON.stringify({ type: 'session.updated' }))
+  await started
+  assert.equal(ready, true)
 })
 
 test('rejects a concurrent start without replacing the connecting socket', async () => {
@@ -65,7 +103,7 @@ test('rejects a concurrent start without replacing the connecting socket', async
 
   await assert.rejects(session.start(), /already started/)
   assert.equal(factoryCalls, 1)
-  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  emitSessionReady(socket)
   await first
 })
 
@@ -86,7 +124,7 @@ test('streams PCM16 and resolves the text-only response', async () => {
   })
   const started = session.start()
   socket.emit('open')
-  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  emitSessionReady(socket)
   await started
 
   session.append('AQIDBA==')
@@ -101,6 +139,24 @@ test('streams PCM16 and resolves the text-only response', async () => {
   assert.equal(socket.sent.some(event => event.type === 'response.create'), true)
 })
 
+test('collects StepAudio audio transcript deltas as the analysis text', async () => {
+  const socket = new FakeSocket()
+  const session = await startSession(socket)
+  const result = session.finish()
+
+  socket.emit('message', JSON.stringify({
+    type: 'response.audio_transcript.delta',
+    delta: '{"trend":"',
+  }))
+  socket.emit('message', JSON.stringify({
+    type: 'response.audio_transcript.delta',
+    delta: 'unknown"}',
+  }))
+  socket.emit('message', JSON.stringify({ type: 'response.done' }))
+
+  assert.equal(await result, '{"trend":"unknown"}')
+})
+
 test('rejects provider error events without leaking the key', async () => {
   const socket = new FakeSocket()
   const session = new StepFunRealtimeSession({
@@ -110,7 +166,7 @@ test('rejects provider error events without leaking the key', async () => {
   })
   const started = session.start()
   socket.emit('open')
-  socket.emit('message', JSON.stringify({ type: 'session.created' }))
+  emitSessionReady(socket)
   await started
   const result = session.finish()
   socket.emit('message', JSON.stringify({

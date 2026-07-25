@@ -12,7 +12,7 @@ describe('formatGlassesFrame', () => {
   it('uses documented glyphs and minimal temporary copy', () => {
     expect(formatGlassesFrame({ kind: 'listening' })).toEqual({
       content: '● 15s',
-      durationMs: 2000,
+      durationMs: 0,
     })
     expect(formatGlassesFrame({ kind: 'ready' })).toEqual({
       content: '▲',

@@ -24,3 +24,48 @@ describe('stopGlassesAudio', () => {
     expect(audioControl).toHaveBeenCalledTimes(3)
   })
 })
+
+describe('finishAfterBestEffortAudioStop', () => {
+  it('continues analysis when the native stop acknowledgement is false', async () => {
+    const lifecycle = await import('../src/social-listening-lifecycle')
+    const finishAfterStop = (
+      lifecycle as unknown as Record<string, unknown>
+    ).finishAfterBestEffortAudioStop
+    const finish = vi.fn().mockResolvedValue('insight')
+
+    expect(finishAfterStop).toBeTypeOf('function')
+    await expect((finishAfterStop as (options: {
+      stopAudio: () => Promise<boolean>
+      finish: () => Promise<string>
+    }) => Promise<string>)({
+      stopAudio: async () => false,
+      finish,
+    })).resolves.toBe('insight')
+    expect(finish).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the thinking state visible until its minimum delay completes', async () => {
+    const { finishAfterBestEffortAudioStop } = await import('../src/social-listening-lifecycle')
+    let releaseMinimum!: () => void
+    const minimumVisible = new Promise<void>(resolve => {
+      releaseMinimum = resolve
+    })
+    const finish = vi.fn().mockResolvedValue('insight')
+    let settled = false
+
+    const result = finishAfterBestEffortAudioStop({
+      stopAudio: async () => true,
+      finish,
+      waitForMinimum: () => minimumVisible,
+    }).then(value => {
+      settled = true
+      return value
+    })
+
+    await vi.waitFor(() => expect(finish).toHaveBeenCalledOnce())
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    releaseMinimum()
+    await expect(result).resolves.toBe('insight')
+  })
+})

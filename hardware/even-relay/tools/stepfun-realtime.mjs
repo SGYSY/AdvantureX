@@ -6,7 +6,7 @@ export class StepFunRealtimeSession {
     apiKey,
     model = 'stepaudio-2.5-realtime',
     baseUrl = 'wss://api.stepfun.com/step_plan/v1/realtime',
-    timeoutMs = 20_000,
+    timeoutMs = 60_000,
     socketFactory,
   }) {
     if (!apiKey) throw new Error('STEPFUN_API_KEY is required')
@@ -18,6 +18,7 @@ export class StepFunRealtimeSession {
     this.socket = null
     this.intentionalCloseSocket = null
     this.text = ''
+    this.audioTranscript = ''
     this.startResolve = null
     this.startReject = null
     this.startTimer = null
@@ -57,14 +58,19 @@ export class StepFunRealtimeSession {
                 instructions: SOCIAL_COPILOT_INSTRUCTIONS,
                 input_audio_format: 'pcm16',
                 output_audio_format: 'pcm16',
+                turn_detection: null,
               },
             }))
+            return
+          }
+          if (event.type === 'session.updated') {
             this.resolveStart()
             return
           }
           if (event.type === 'response.text.delta') this.text += event.delta ?? ''
+          if (event.type === 'response.audio_transcript.delta') this.audioTranscript += event.delta ?? ''
           if (event.type === 'response.done' && this.finishResolve) {
-            this.resolveFinish(this.text)
+            this.resolveFinish(this.text || this.audioTranscript)
             this.closeSocket(socket, true)
           }
           if (event.type === 'error') this.fail(new Error(event.error?.message ?? 'StepFun realtime error'))

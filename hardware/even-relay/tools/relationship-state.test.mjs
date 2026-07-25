@@ -26,6 +26,23 @@ const actionTemplates = {
   end_politely: '礼貌结束对话',
 }
 
+test('derives safe advice from observable conversation signals', () => {
+  const state = parseRelationshipState(JSON.stringify({
+    speech_present: true,
+    question_detected: true,
+    laughter_detected: false,
+    pace: 'steady',
+    pause_level: 'medium',
+    turn_taking: 'balanced',
+    topic: '摄影与旅行',
+    confidence: 0.98,
+  }), 1_000)
+
+  assert.equal(state.trend, 'warming')
+  assert.equal(state.topic, '摄影与旅行')
+  assert.deepEqual(state.suggestion, ['互动正在升温', '先回应，再认真听'])
+})
+
 test('maps every allowed suggestion code to fixed backend copy', () => {
   for (const [suggestionCode, actionLine] of Object.entries(actionTemplates)) {
     const state = parseRelationshipState(JSON.stringify({

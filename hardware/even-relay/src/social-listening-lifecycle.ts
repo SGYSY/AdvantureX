@@ -21,3 +21,17 @@ export async function stopGlassesAudio({
   }
   return { stopped: false, attempts: maxAttempts }
 }
+
+export async function finishAfterBestEffortAudioStop<T>({
+  stopAudio,
+  finish,
+  waitForMinimum = async () => {},
+}: {
+  stopAudio: () => Promise<boolean>
+  finish: () => Promise<T>
+  waitForMinimum?: () => Promise<void>
+}): Promise<T> {
+  await stopAudio()
+  const [result] = await Promise.all([finish(), waitForMinimum()])
+  return result
+}

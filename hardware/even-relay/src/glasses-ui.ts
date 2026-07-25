@@ -51,7 +51,7 @@ export function createCheckedGlassesWriter(options: {
 
 export function formatGlassesFrame(frame: GlassesFrame) {
   if (frame.kind === 'blank') return { content: ' ', durationMs: 0 }
-  if (frame.kind === 'listening') return { content: '● 15s', durationMs: 2000 }
+  if (frame.kind === 'listening') return { content: '● 15s', durationMs: 0 }
   if (frame.kind === 'thinking') return { content: '○', durationMs: 2000 }
   if (frame.kind === 'ready') return { content: '▲', durationMs: 2000 }
   if (frame.kind === 'rescue') return { content: '■ 已收到', durationMs: 6000 }
