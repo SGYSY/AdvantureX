@@ -1,5 +1,6 @@
 import {
   AppLocationAccuracy,
+  AudioInputSource,
   CreateStartUpPageContainer,
   EventSourceType,
   OsEventTypeList,
@@ -13,12 +14,33 @@ import {
   type EvenHubEvent,
   type LaunchSource,
 } from '@evenrealities/even_hub_sdk'
+import { RescueSequenceRecognizer } from './gesture-sequence'
+import {
+  createCheckedGlassesWriter,
+  createGlassesFramePresenter,
+  frameForSocialFailure,
+  frameForSocialInsight,
+  getGlassesPageLayout,
+  type GlassesFrame,
+} from './glasses-ui'
+import {
+  finishAfterBestEffortAudioStop,
+  stopGlassesAudio,
+} from './social-listening-lifecycle'
+import {
+  routeSocialGesture,
+  shouldAppendSocialPcm,
+  socialFailureGesture,
+  SocialCopilotController,
+  type SocialInsight,
+  type SocialListeningState,
+} from './social-copilot'
 
 type ForwardConfig = {
   endpoint: string
+  accessToken: string
   enabled: boolean
   includeRaw: boolean
-  noCors: boolean
 }
 
 type SourceKind = 'ring' | 'glasses_right' | 'glasses_left' | 'unknown'
@@ -91,7 +113,7 @@ type RelayPayload = {
   action: RecognizedAction | null
 }
 
-const CONFIG_KEY = 'even-r1-relay.config.v1'
+const CONFIG_KEY = 'even-r1-relay.config.v4'
 const MAX_LOGS = 40
 const SEQUENCE_WINDOW_MS = 2500
 
@@ -158,89 +180,120 @@ let glassesReady = false
 let eventId = 0
 let events: NormalizedEvent[] = []
 let sequence: GestureToken[] = []
-let lastForwardStatus = 'Forward idle'
-let deviceDiagnostic = 'Device not loaded'
-let glassesDiagnostic = 'G2 page pending'
-let lastRawEventPreview = 'No raw event'
+let lastForwardStatus = '未开始转发'
+let deviceDiagnostic = '设备信息未加载'
+let glassesDiagnostic = 'G2 页面待创建'
+let lastRawEventPreview = '暂无原始事件'
+let socialListeningTimer: number | null = null
+let socialListeningState: SocialListeningState = 'idle'
+let socialCopilot: SocialCopilotController | null = null
+let socialListeningRun = 0
+let latestSocialInsight: SocialInsight | null = null
+const writeGlassesText = createCheckedGlassesWriter({
+  update: async content => {
+    if (!bridge || !glassesReady) return false
+    return bridge.textContainerUpgrade(new TextContainerUpgrade({
+      containerID: 1,
+      containerName: 'snake-main',
+      content,
+    }))
+  },
+  report: diagnostic => {
+    glassesDiagnostic = `页面已创建；${diagnostic}`
+    renderDiagnostics()
+  },
+})
+const glassesFramePresenter = createGlassesFramePresenter({
+  render: writeGlassesText,
+})
 
 const app = byId<HTMLDivElement>('app')
 app.innerHTML = `
   <main class="shell">
-    <section class="panel header-panel">
+    <section class="panel header">
       <div>
         <p class="eyebrow">Even G2 / R1</p>
-        <h1>Input Relay Console</h1>
+        <h1>输入中继控制台</h1>
+        <p class="subtitle">捕获戒指与眼镜输入，并转发到你的硬件。</p>
       </div>
-      <span id="bridge-status" class="status-pill warn">Bridge pending</span>
+      <span id="bridge-status" class="status-pill warn">正在连接…</span>
     </section>
 
-    <section class="panel controls-grid">
+    <section class="panel">
+      <div class="panel-title">
+        <h2>转发设置</h2>
+        <span id="endpoint-host" class="hint">目标：未设置</span>
+      </div>
       <label class="field">
-        <span>Forward endpoint</span>
-        <input id="endpoint" inputmode="url" placeholder="http://<your-mac-ip>:8788/even" />
+        <span>转发地址（Mac relay 或硬件）</span>
+        <input id="endpoint" inputmode="url" placeholder="https://当前-relay-地址/even" />
       </label>
-      <label class="check-field">
-        <input id="enabled" type="checkbox" />
-        <span>Forward events</span>
+      <label class="field">
+        <span>Relay 本地访问令牌</span>
+        <input id="access-token" type="password" autocomplete="off" placeholder="仅保存在本机" />
       </label>
-      <label class="check-field">
-        <input id="include-raw" type="checkbox" />
-        <span>Include raw JSON</span>
-      </label>
-      <label class="check-field">
-        <input id="no-cors" type="checkbox" />
-        <span>No-CORS fire-and-forget</span>
-      </label>
+      <div class="checks">
+        <label class="check-field">
+          <input id="enabled" type="checkbox" />
+          <span>转发事件</span>
+        </label>
+        <label class="check-field">
+          <input id="include-raw" type="checkbox" />
+          <span>包含原始 JSON</span>
+        </label>
+      </div>
       <div class="button-row">
-        <button id="save-config" type="button">Save</button>
-        <button id="send-test" type="button">Send test</button>
-        <button id="refresh-device" type="button">Device</button>
-        <button id="refresh-location" type="button">Location</button>
-        <button id="close-glasses" type="button" class="danger">Close G2</button>
+        <button id="save-config" type="button" class="primary">保存</button>
+        <button id="send-test" type="button">发送测试</button>
+        <button id="refresh-device" type="button">设备信息</button>
+        <button id="refresh-location" type="button">定位</button>
+        <button id="close-glasses" type="button" class="danger">关闭 G2</button>
       </div>
     </section>
 
     <section class="panel status-grid">
       <div>
-        <span class="metric-label">Last event</span>
-        <strong id="last-event">None</strong>
+        <span class="metric-label">最近事件</span>
+        <strong id="last-event">无</strong>
       </div>
       <div>
-        <span class="metric-label">Sequence</span>
-        <strong id="sequence">Empty</strong>
+        <span class="metric-label">手势序列</span>
+        <strong id="sequence">空</strong>
       </div>
       <div>
-        <span class="metric-label">Forward</span>
-        <strong id="forward-status">Idle</strong>
+        <span class="metric-label">转发状态</span>
+        <strong id="forward-status">空闲</strong>
       </div>
       <div>
-        <span class="metric-label">Context</span>
-        <strong id="context-status">No device context</strong>
+        <span class="metric-label">设备</span>
+        <strong id="context-status">无设备</strong>
       </div>
     </section>
 
     <section class="panel">
-      <div class="section-title">
-        <h2>Event Log</h2>
-        <button id="clear-log" type="button">Clear</button>
+      <div class="panel-title">
+        <h2>事件日志</h2>
+        <button id="clear-log" type="button">清空</button>
       </div>
       <ol id="event-log" class="event-log"></ol>
     </section>
 
     <section class="panel diagnostics">
-      <h2>Diagnostics</h2>
+      <div class="panel-title">
+        <h2>诊断</h2>
+      </div>
       <dl>
         <div>
-          <dt>Device</dt>
-          <dd id="device-diagnostic">Device not loaded</dd>
+          <dt>设备</dt>
+          <dd id="device-diagnostic">设备信息未加载</dd>
         </div>
         <div>
-          <dt>G2 page</dt>
-          <dd id="glasses-diagnostic">G2 page pending</dd>
+          <dt>G2 页面</dt>
+          <dd id="glasses-diagnostic">G2 页面待创建</dd>
         </div>
         <div>
-          <dt>Last raw event</dt>
-          <dd><pre id="raw-event">No raw event</pre></dd>
+          <dt>原始事件</dt>
+          <dd><pre id="raw-event">暂无原始事件</pre></dd>
         </div>
       </dl>
     </section>
@@ -249,9 +302,9 @@ app.innerHTML = `
 
 const bridgeStatus = byId<HTMLSpanElement>('bridge-status')
 const endpointInput = byId<HTMLInputElement>('endpoint')
+const accessTokenInput = byId<HTMLInputElement>('access-token')
 const enabledInput = byId<HTMLInputElement>('enabled')
 const includeRawInput = byId<HTMLInputElement>('include-raw')
-const noCorsInput = byId<HTMLInputElement>('no-cors')
 const saveConfigButton = byId<HTMLButtonElement>('save-config')
 const sendTestButton = byId<HTMLButtonElement>('send-test')
 const refreshDeviceButton = byId<HTMLButtonElement>('refresh-device')
@@ -266,20 +319,26 @@ const eventLogEl = byId<HTMLOListElement>('event-log')
 const deviceDiagnosticEl = byId<HTMLElement>('device-diagnostic')
 const glassesDiagnosticEl = byId<HTMLElement>('glasses-diagnostic')
 const rawEventEl = byId<HTMLPreElement>('raw-event')
+const endpointHostEl = byId<HTMLElement>('endpoint-host')
 
 const initialConfig = loadConfig()
+const rescueSequenceRecognizer = new RescueSequenceRecognizer()
 endpointInput.value = initialConfig.endpoint
+accessTokenInput.value = initialConfig.accessToken
 enabledInput.checked = initialConfig.enabled
 includeRawInput.checked = initialConfig.includeRaw
-noCorsInput.checked = initialConfig.noCors
 
 saveConfigButton.addEventListener('click', () => {
   saveConfig(readConfigFromControls())
-  setForwardStatus('Config saved')
+  setForwardStatus('配置已保存')
+  renderEndpointHost()
 })
 
-for (const input of [endpointInput, enabledInput, includeRawInput, noCorsInput]) {
-  input.addEventListener('change', () => saveConfig(readConfigFromControls()))
+for (const input of [endpointInput, accessTokenInput, enabledInput, includeRawInput]) {
+  input.addEventListener('change', () => {
+    saveConfig(readConfigFromControls())
+    renderEndpointHost()
+  })
 }
 
 sendTestButton.addEventListener('click', () => {
@@ -302,22 +361,23 @@ clearLogButton.addEventListener('click', () => {
   events = []
   sequence = []
   render()
-  void updateGlasses('R1 Relay\nWaiting for input\nForward ready')
+  void showGlassesFrame({ kind: 'blank' })
 })
 
 void boot()
 
 async function boot() {
+  renderEndpointHost()
   bridge = await waitForBridgeWithTimeout(7000)
 
   if (!bridge) {
-    setBridgeStatus('Bridge unavailable', 'warn')
-    setForwardStatus('Open inside Even App to capture R1/G2 events')
+    setBridgeStatus('桥接不可用', 'warn')
+    setForwardStatus('请在 Even App 内打开以捕获 R1/G2 事件')
     render()
     return
   }
 
-  setBridgeStatus('Bridge connected', 'ok')
+  setBridgeStatus('桥接已连接', 'ok')
 
   await Promise.all([loadDeviceInfo(), createGlassesPage()])
 
@@ -332,11 +392,21 @@ async function boot() {
   })
 
   bridge.onEvenHubEvent(event => {
+    if (event.audioEvent) {
+      if (socialCopilot && shouldAppendSocialPcm(
+        socialListeningState,
+        event.audioEvent.source,
+        AudioInputSource.Glasses,
+      )) {
+        socialCopilot.appendPcm(event.audioEvent.audioPcm)
+      }
+      return
+    }
     void handleEvenHubEvent(event)
   })
 
   render()
-  void updateGlasses('R1 Relay\nWaiting for R1/G2 input\nEndpoint: ' + endpointHostLabel())
+  void showGlassesFrame({ kind: 'blank' })
 }
 
 async function waitForBridgeWithTimeout(timeoutMs: number): Promise<EvenAppBridge | null> {
@@ -359,10 +429,10 @@ async function loadDeviceInfo() {
     deviceStatus = deviceInfo?.status ?? null
     deviceDiagnostic = deviceInfo
       ? previewJson(toPlainValue(deviceInfo), 240)
-      : 'getDeviceInfo returned null. Check G2/R1 pairing, connection, and whether this page was opened from Even App with devices connected.'
+      : 'getDeviceInfo 返回 null。请检查 G2/R1 是否已配对、已连接，以及本页是否从 Even App 内（设备已连接）打开。'
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    deviceDiagnostic = `getDeviceInfo failed: ${message}`
+    deviceDiagnostic = `getDeviceInfo 失败：${message}`
     console.warn('Failed to load device info:', error)
   }
 
@@ -373,19 +443,7 @@ async function loadDeviceInfo() {
 async function createGlassesPage() {
   if (!bridge) return
 
-  const mainText = new TextContainerProperty({
-    xPosition: 0,
-    yPosition: 0,
-    width: 576,
-    height: 288,
-    borderWidth: 0,
-    borderColor: 5,
-    paddingLength: 4,
-    containerID: 1,
-    containerName: 'relay-main',
-    content: 'R1 Relay\nStarting...',
-    isEventCapture: 1,
-  })
+  const mainText = new TextContainerProperty(getGlassesPageLayout())
 
   const result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
@@ -396,8 +454,8 @@ async function createGlassesPage() {
 
   glassesReady = result === 0
   glassesDiagnostic = glassesReady
-    ? 'createStartUpPageContainer success'
-    : `createStartUpPageContainer failed: ${String(result)}`
+    ? 'createStartUpPageContainer 成功'
+    : `createStartUpPageContainer 失败：${String(result)}`
   console.log('G2 page created:', glassesReady ? 'success' : `failed (${result})`)
 }
 
@@ -409,11 +467,26 @@ async function handleEvenHubEvent(event: EvenHubEvent) {
     return
   }
 
-  const action = updateGestureSequence(normalized)
+  let action = updateGestureSequence(normalized)
+  if (
+    normalized.source.kind === 'ring' &&
+    (normalized.eventType.label === 'click' || normalized.eventType.label === 'double_click')
+  ) {
+    const rescueAction = rescueSequenceRecognizer.push(normalized.eventType.label, Date.parse(normalized.receivedAt))
+    if (rescueAction) action = { name: rescueAction, confidence: 1 }
+  }
   events = [normalized, ...events].slice(0, MAX_LOGS)
   render()
 
-  await updateGlasses(glassesSummary(normalized, action))
+  if (action?.name === 'snake1_rescue') await showGlassesFrame({ kind: 'rescue' })
+
+  const socialRoute = routeSocialGesture(normalized.gesture)
+  if (socialRoute === 'toggle') {
+    await toggleSocialListening()
+  } else if (socialRoute === 'view') {
+    await showLatestSocialInsight()
+    return
+  }
 
   const config = readConfigFromControls()
   if (config.enabled && config.endpoint.trim()) {
@@ -427,6 +500,149 @@ async function handleEvenHubEvent(event: EvenHubEvent) {
   ) {
     await bridge.shutDownPageContainer(1)
   }
+}
+
+async function toggleSocialListening() {
+  if (!bridge) return
+  if (socialListeningState === 'active') {
+    await finishSocialListening()
+    return
+  }
+  if (socialListeningState === 'error') {
+    await retrySocialMicrophoneStop()
+    return
+  }
+  if (socialListeningState === 'stopping') return
+  if (socialListeningState !== 'idle') return
+
+  const config = readConfigFromControls()
+  const controller = new SocialCopilotController({
+    eventEndpoint: config.endpoint,
+    accessToken: config.accessToken,
+  })
+  const run = ++socialListeningRun
+  socialListeningState = 'starting'
+  socialCopilot = controller
+  await showGlassesFrame({ kind: 'listening' })
+  try {
+    await controller.start()
+    if (socialListeningState !== 'starting' || socialCopilot !== controller || run !== socialListeningRun) {
+      await controller.cancel()
+      return
+    }
+    const enabled = await bridge.audioControl(true, AudioInputSource.Glasses)
+    if (!enabled) throw new Error('Glasses microphone unavailable')
+    socialListeningState = 'active'
+    socialListeningTimer = window.setTimeout(() => {
+      void finishSocialListening()
+    }, 15_000)
+  } catch (error) {
+    console.warn('Social listening failed to start:', error)
+    reportSocialFailure('start', error)
+    await resetSocialListening(controller, run)
+    await showGlassesFrame({ kind: 'error' })
+  }
+}
+
+async function finishSocialListening() {
+  if (!bridge || socialListeningState !== 'active' || !socialCopilot) return
+  const controller = socialCopilot
+  const run = socialListeningRun
+  socialListeningState = 'finishing'
+  clearSocialListeningTimer()
+  try {
+    await showGlassesFrame({ kind: 'thinking' })
+    const insight = await finishAfterBestEffortAudioStop({
+      stopAudio: stopSocialMicrophone,
+      finish: () => controller.finish(),
+      waitForMinimum: () => new Promise(resolve => window.setTimeout(resolve, 1200)),
+    })
+    if (socialCopilot !== controller || run !== socialListeningRun) return
+    latestSocialInsight = insight
+    await showGlassesFrame(frameForSocialInsight(insight))
+  } catch (error) {
+    console.warn('Social analysis failed:', error)
+    reportSocialFailure('finish', error)
+    if (socialCopilot === controller && run === socialListeningRun) {
+      await showGlassesFrame(frameForSocialFailure(error))
+    }
+  } finally {
+    await resetSocialListening(controller, run, true)
+  }
+}
+
+function clearSocialListeningTimer() {
+  if (socialListeningTimer !== null) window.clearTimeout(socialListeningTimer)
+  socialListeningTimer = null
+}
+
+async function stopSocialMicrophone() {
+  if (!bridge) return false
+  const result = await stopGlassesAudio({
+    audioControl: bridge.audioControl.bind(bridge),
+  })
+  return result.stopped
+}
+
+async function retrySocialMicrophoneStop() {
+  socialListeningState = 'stopping'
+  const stopped = await stopSocialMicrophone()
+  socialListeningState = 'idle'
+  if (stopped) setForwardStatus('眼镜麦克风已停止')
+  else setForwardStatus('已发送眼镜麦克风停止命令')
+}
+
+async function resetSocialListening(
+  controller: SocialCopilotController,
+  run: number,
+  microphoneStopAttempted = false,
+) {
+  clearSocialListeningTimer()
+  if (!microphoneStopAttempted) await stopSocialMicrophone()
+  try {
+    await controller.cancel()
+  } catch (error) {
+    console.warn('Failed to cancel social session:', error)
+  }
+  if (socialCopilot === controller && run === socialListeningRun) {
+    socialCopilot = null
+    socialListeningState = 'idle'
+  }
+}
+
+async function showLatestSocialInsight() {
+  const insight = latestSocialInsight
+  if (!insight || Date.now() >= insight.expiresAt) {
+    await showGlassesFrame({ kind: 'empty' })
+    return
+  }
+  await showGlassesFrame({ kind: 'advice', lines: insight.suggestion })
+}
+
+async function showGlassesFrame(frame: GlassesFrame) {
+  if (!bridge || !glassesReady) return
+  try {
+    await glassesFramePresenter.show(frame)
+  } catch (error) {
+    console.warn('Failed to update glasses:', error)
+  }
+}
+
+function reportSocialFailure(stage: 'start' | 'finish', error: unknown) {
+  const failure = error instanceof Error ? error : new Error(String(error))
+  void forwardEvent({
+    id: ++eventId,
+    receivedAt: new Date().toISOString(),
+    envelope: 'unknown',
+    gesture: socialFailureGesture(stage, failure),
+    source: { label: 'unknown', kind: 'unknown' },
+    eventType: { label: 'client_error' },
+    raw: {
+      stage,
+      name: failure.name,
+      message: failure.message,
+    },
+  }, null)
 }
 
 function normalizeEvent(event: EvenHubEvent): NormalizedEvent | null {
@@ -466,7 +682,7 @@ async function handleTestEvent() {
   events = [event, ...events].slice(0, MAX_LOGS)
   render()
 
-  await updateGlasses(glassesSummary(event, action))
+  if (action.name === 'snake1_rescue') await showGlassesFrame({ kind: 'rescue' })
   await forwardEvent(event, action)
 }
 
@@ -621,7 +837,7 @@ async function forwardEvent(event: NormalizedEvent, action: RecognizedAction | n
   saveConfig(config)
 
   if (!config.endpoint.trim()) {
-    setForwardStatus('No endpoint configured')
+    setForwardStatus('未设置转发地址')
     return
   }
 
@@ -632,24 +848,20 @@ async function forwardEvent(event: NormalizedEvent, action: RecognizedAction | n
   try {
     const response = await fetch(config.endpoint.trim(), {
       method: 'POST',
-      mode: config.noCors ? 'no-cors' : 'cors',
+      mode: 'cors',
       headers: {
-        'Content-Type': config.noCors ? 'text/plain;charset=UTF-8' : 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.accessToken}`,
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
 
-    if (config.noCors) {
-      setForwardStatus(`Sent opaque ${formatTime(new Date())}`)
-      return
-    }
-
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    setForwardStatus(`POST ok ${formatTime(new Date())}`)
+    setForwardStatus(`转发成功 ${formatTime(new Date())}`)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    setForwardStatus(`POST failed: ${message}`)
+    setForwardStatus(`转发失败：${message}`)
   } finally {
     window.clearTimeout(timeout)
   }
@@ -681,10 +893,10 @@ function createTestEvent(): NormalizedEvent {
     id: ++eventId,
     receivedAt: new Date().toISOString(),
     envelope: 'sysEvent',
-    gesture: 'ring.double_click',
+    gesture: 'ring.click',
     source: { code: EventSourceType.TOUCH_EVENT_FROM_RING, label: 'ring', kind: 'ring' },
-    eventType: { code: OsEventTypeList.DOUBLE_CLICK_EVENT, label: 'double_click' },
-    raw: { test: true, eventSource: EventSourceType.TOUCH_EVENT_FROM_RING, eventType: OsEventTypeList.DOUBLE_CLICK_EVENT },
+    eventType: { code: OsEventTypeList.CLICK_EVENT, label: 'click' },
+    raw: { test: true, eventSource: EventSourceType.TOUCH_EVENT_FROM_RING, eventType: OsEventTypeList.CLICK_EVENT },
   }
 }
 
@@ -707,53 +919,40 @@ async function refreshLocation() {
   }
 }
 
-async function updateGlasses(content: string) {
-  if (!bridge || !glassesReady) return
-
-  try {
-    await bridge.textContainerUpgrade(
-      new TextContainerUpgrade({
-        containerID: 1,
-        containerName: 'relay-main',
-        content,
-      }),
-    )
-  } catch (error) {
-    console.warn('Failed to update glasses:', error)
-  }
-}
-
-function glassesSummary(event: NormalizedEvent, action: RecognizedAction | null): string {
-  const lines = [
-    'R1 Relay',
-    event.gesture,
-    action ? `action: ${action.name}` : `event: ${event.envelope}`,
-    `seq: ${sequence.slice(-4).map(item => item.name.replace('swipe_', '')).join(' ') || '-'}`,
-    lastForwardStatus.slice(0, 32),
-  ]
-
-  return lines.join('\n')
-}
-
 function render() {
-  lastEventEl.textContent = events[0]?.gesture ?? 'None'
-  sequenceEl.textContent = sequence.slice(-4).map(item => item.label).join(' -> ') || 'Empty'
+  lastEventEl.textContent = events[0]?.gesture ?? '无'
+  sequenceEl.textContent = sequence.slice(-4).map(item => item.label).join(' → ') || '空'
   forwardStatusEl.textContent = lastForwardStatus
   renderContext()
   renderLog()
   renderDiagnostics()
 }
 
+/** 转发目标主机提示 */
+function renderEndpointHost() {
+  const endpoint = readConfigFromControls().endpoint
+  if (!endpoint) {
+    endpointHostEl.textContent = '目标：未设置'
+    return
+  }
+  try {
+    const url = new URL(endpoint)
+    endpointHostEl.textContent = `目标：${url.host}`
+  } catch {
+    endpointHostEl.textContent = '目标：地址无效'
+  }
+}
+
 function renderContext() {
-  const model = deviceInfo?.model ?? 'no-device'
+  const model = deviceInfo?.model ?? '无设备'
   const battery = deviceStatus?.batteryLevel === undefined ? '' : ` ${deviceStatus.batteryLevel}%`
-  const location = lastLocation ? ' location' : ''
+  const location = lastLocation ? ' 已定位' : ''
   contextStatusEl.textContent = `${model}${battery}${location}`
 }
 
 function renderLog() {
   if (events.length === 0) {
-    eventLogEl.innerHTML = '<li class="empty">No events captured yet</li>'
+    eventLogEl.innerHTML = '<li class="empty">暂无捕获事件</li>'
     return
   }
 
@@ -798,18 +997,26 @@ function setForwardStatus(text: string) {
 function readConfigFromControls(): ForwardConfig {
   return {
     endpoint: endpointInput.value.trim(),
+    accessToken: accessTokenInput.value,
     enabled: enabledInput.checked,
     includeRaw: includeRawInput.checked,
-    noCors: noCorsInput.checked,
   }
 }
 
 function loadConfig(): ForwardConfig {
-  const fallback: ForwardConfig = {
-    endpoint: defaultEndpoint(),
+  const secureDefaults: ForwardConfig = {
+    endpoint: '',
+    accessToken: '',
     enabled: false,
     includeRaw: true,
-    noCors: false,
+  }
+  const buildEndpoint = import.meta.env.VITE_DEFAULT_FORWARD_URL?.trim() ?? ''
+  const buildAccessToken = import.meta.env.VITE_DEFAULT_RELAY_TOKEN ?? ''
+  const fallback: ForwardConfig = {
+    ...secureDefaults,
+    endpoint: buildEndpoint || secureDefaults.endpoint,
+    accessToken: buildAccessToken || secureDefaults.accessToken,
+    enabled: Boolean(buildEndpoint && buildAccessToken),
   }
 
   try {
@@ -818,9 +1025,9 @@ function loadConfig(): ForwardConfig {
     const parsed = JSON.parse(raw) as Partial<ForwardConfig>
     return {
       endpoint: parsed.endpoint ?? fallback.endpoint,
+      accessToken: parsed.accessToken ?? fallback.accessToken,
       enabled: parsed.enabled ?? fallback.enabled,
       includeRaw: parsed.includeRaw ?? fallback.includeRaw,
-      noCors: parsed.noCors ?? fallback.noCors,
     }
   } catch {
     return fallback
@@ -829,23 +1036,6 @@ function loadConfig(): ForwardConfig {
 
 function saveConfig(config: ForwardConfig) {
   window.localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
-}
-
-function defaultEndpoint(): string {
-  const host = window.location.hostname
-  if (!host || host === 'localhost' || host === '127.0.0.1') return ''
-  return `http://${host}:8788/even`
-}
-
-function endpointHostLabel(): string {
-  const endpoint = readConfigFromControls().endpoint
-  if (!endpoint) return 'not set'
-
-  try {
-    return new URL(endpoint).host
-  } catch {
-    return 'invalid'
-  }
 }
 
 function readNumberFrom(primary: unknown, fallback: unknown, keys: string[]): number | undefined {

@@ -133,7 +133,7 @@ class Orchestrator:
         ))
 
     async def even_ring_event(self, payload: EvenRelayPayload) -> dict[str, object]:
-        """Map the local Even R1 relay's double-click to the fixed private demo."""
+        """Map an authorized semantic Even R1 rescue action to the fixed demo."""
         event = payload.event
         source = event.get("source") if isinstance(event.get("source"), dict) else {}
         source_kind = str(source.get("kind", "unknown"))
@@ -141,16 +141,19 @@ class Orchestrator:
         action_name = str(payload.action.get("name", "")) if payload.action else ""
         self.store.log("ring.event", f"{source_kind} {gesture} action={action_name or 'none'}")
 
-        # The R1 page reports a normalized double-click. A single click remains
-        # available for ordinary UI selection and never sends a surprise message.
-        is_trigger = source_kind == "ring" and (
-            gesture == "ring.double_click" or action_name == "ring_cancel_or_shortcut"
-        )
+        is_trigger = source_kind == "ring" and action_name == "snake1_rescue"
         if not is_trigger:
-            return {"ok": True, "accepted": False, "reason": "Ring double-click required."}
+            return {
+                "ok": True,
+                "accepted": False,
+                "reason": "Deliberate SNAKE1 rescue sequence required.",
+            }
 
         try:
-            call = await self.trigger_fixed_demo(call_delay_seconds=10, source="ring.double_click")
+            call = await self.trigger_fixed_demo(
+                call_delay_seconds=10,
+                source="ring.snake1_rescue",
+            )
         except RuntimeError as exc:
             return {"ok": False, "accepted": False, "reason": str(exc)}
         return {"ok": True, "accepted": True, "call_id": call.id, "ring_at": call.ring_at}

@@ -2,41 +2,44 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#dceeff">
-  <title>Wingman 来电</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>Wingman</title>
   <link rel="stylesheet" href="/static/mobile.css">
 </head>
 <body>
   <main class="phone-shell">
-    <section class="call-card" aria-live="polite">
-      <header class="call-header">
-        <button class="round-top" id="more" aria-label="更多">•••</button>
-        <span class="scene">✦ 私人提醒</span>
-        <button class="round-top" id="subtitle" aria-label="字幕">字幕</button>
-      </header>
-      <div class="stage">
-        <div class="avatar-ring"><img src="/static/assets/wingman-avatar.png" alt="Wingman 头像"></div>
-        <h1>Wingman</h1>
-        <p class="call-kind">私人助理来电</p>
-        <p id="status" class="status">准备开始一个模拟双击救场</p>
-        <div id="dots" class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-        <p id="caption" class="caption">点击下方按钮后，先发送 iMessage，再显示来电。</p>
-      </div>
-      <section class="setup" id="setup">
-        <p class="fixed-message">iMessage 将发送给你已连接的号码：<br><strong>“有一群母猪排队掉进水里”</strong></p>
-        <label>播放录音（可选 MP3）
-          <input id="recording" type="file" accept="audio/mpeg,audio/mp3,audio/*">
-        </label>
-        <button id="trigger" class="trigger">模拟眼镜 / 戒指双击</button>
-        <p class="tiny">先经 Spectrum 发出 iMessage；5 秒后进入来电。网页来电不消耗电话线路。</p>
+      <section class="experience" aria-live="polite">
+      <section class="standby-screen" id="standbyScreen"></section>
+
+      <section class="call-screen hidden" id="callScreen">
+        <button class="more-button" id="more" aria-label="更多选项">•••</button>
+        <div class="more-sheet hidden" id="moreSheet"><button id="subtitle">显示字幕</button></div>
+        <section class="caller">
+          <div class="avatar-ring"><img src="/static/assets/wingman-avatar.png" alt="Wingman 头像"></div>
+          <h1>Wingman</h1>
+          <p class="call-kind">私人助理来电</p>
+          <p id="status" class="status">Wingman 正在呼叫你</p>
+          <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+          <p id="caption" class="caption">向右滑动来接听。</p>
+        </section>
       </section>
-      <section class="controls" aria-label="通话控制">
-        <button id="sound" class="control neutral hidden" aria-label="开启铃声"><span>♬</span><small>开启铃声</small></button>
-        <button id="decline" class="control decline hidden" aria-label="挂断"><span>×</span><small>挂断</small></button>
-        <button id="answer" class="control answer hidden" aria-label="接听"><span>⌕</span><small>接听</small></button>
+
+      <section class="incoming-actions hidden" id="incomingActions" aria-label="来电操作">
+        <button id="decline" class="circle-action decline hidden" aria-label="挂断"><span>×</span><small>挂断</small></button>
+        <div class="answer-slider hidden" id="answerSlider" role="button" tabindex="0" aria-label="向右滑动接听">
+          <span class="answer-knob" id="answerKnob">›</span><span class="answer-label">滑动来接听</span>
+        </div>
       </section>
       <p id="audioHint" class="audio-hint"></p>
+
+      <section class="audio-arm" id="audioArm" aria-label="进入体验">
+        <button id="armAudio" class="enter-button">
+          <span>R1</span>
+          <strong>点击进入</strong>
+          <small>开启全屏与来电铃声</small>
+        </button>
+      </section>
     </section>
   </main>
   <audio id="ringtone" src="/static/assets/ringtone.mp3" loop preload="auto"></audio>

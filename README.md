@@ -26,6 +26,26 @@ Hardware contributors should start with the [event contract](docs/hardware-event
 and [contribution guide](CONTRIBUTING.md). Device code sends normalized gestures
 to the backend; it never contains Photon credentials.
 
+The maintained public Even G2/R1 delivery is
+[`hardware/even-relay`](hardware/even-relay). It is the same fail-closed source
+as the standalone SNAKE ONE relay: new installs have an empty endpoint/token
+and forwarding disabled; `/even` and `/social/*` require
+`RELAY_ACCESS_TOKEN`; the loopback Wingman hop requires
+`WINGMAN_SHARED_SECRET`.
+
+```bash
+cd hardware/even-relay
+npm install
+cp .env.example .env
+# Fill local-only STEPFUN_API_KEY, RELAY_ACCESS_TOKEN, and WINGMAN_SHARED_SECRET.
+npm run relay
+```
+
+The relay command requires `.env` and does not silently start without it.
+For a temporary public tunnel, enter the newly generated HTTPS endpoint and
+local relay token in the installed Even app. Update the endpoint after every
+tunnel restart; no temporary domain is embedded in this repository.
+
 ## Quick start
 
 ```bash
@@ -54,8 +74,11 @@ cold-start a direct message to a phone number or Apple ID.
    ```env
    USER_PHONE_NUMBER=+8613812345678
    PHOTON_BRIDGE_URL=http://127.0.0.1:8787
-   WINGMAN_SHARED_SECRET=use-a-long-local-random-value
+   WINGMAN_SHARED_SECRET=
    ```
+
+   Generate a long random local value and fill it after copying the example;
+   keep the committed placeholder empty.
 
 2. In `snakeone/.env`, keep the Photon-generated `PROJECT_ID` and
    `PROJECT_SECRET`, then add the exact same `WINGMAN_SHARED_SECRET` and:
@@ -140,11 +163,11 @@ brew install cloudflared # only needed once
 cloudflared tunnel --url http://127.0.0.1:8080
 ```
 
-Copy the `https://…trycloudflare.com` address it prints, then place this in the
-root `.env` and restart Uvicorn:
+Copy the temporary HTTPS address it prints, then place this in the root `.env`
+and restart Uvicorn:
 
 ```env
-CALL_AUDIO_URL=https://your-tunnel.trycloudflare.com/wingman-call.wav
+CALL_AUDIO_URL=https://<temporary-host>/wingman-call.wav
 ```
 
 For a persistent deployment, host the same WAV (or any public MP3/WAV) on a
@@ -153,11 +176,20 @@ public HTTPS host instead of a temporary tunnel.
 ## Device integration endpoints
 
 - `POST /api/v1/events/zilo` — ring gateway; send `{"kind":"double_tap"}`
+- `POST /api/v1/hardware/even` — loopback-only Even relay gateway
 - `POST /api/v1/voice/turn` — viaim / headset text turn
 - `POST /api/v1/photon/inbound` — bridge webhook for incoming iMessages
 - `POST /api/v1/rescues` — create a rescue from any client
 
 All endpoints use `X-Wingman-Key` when `API_KEY` is set. For a browser deployment, place the API behind an authenticated gateway; do not expose a production API key in client-side code.
+
+The Even hardware gateway has a separate fail-closed boundary. Set a non-empty
+`WINGMAN_SHARED_SECRET` in this repository's root `.env`, set the same local
+value in the Even relay environment, and run the relay on `127.0.0.1:8788`.
+The relay sends `X-Wingman-Secret`; Wingman returns `503` when its secret is
+unconfigured, `403` for a wrong secret or non-loopback caller, and only then
+processes the event. Do not put this server-to-server secret in the Even phone
+UI.
 
 ## Safety model
 
