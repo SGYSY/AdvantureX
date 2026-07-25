@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { createGlassesFramePresenter, formatGlassesFrame } from '../src/glasses-ui'
 
 describe('formatGlassesFrame', () => {
-  it('renders standby as a single blank space', () => {
+  it('renders a visible social assistant home screen at standby', () => {
     expect(formatGlassesFrame({ kind: 'blank' })).toEqual({
-      content: ' ',
+      content: '搭讪助手\n↑ 上滑开始',
       durationMs: 0,
     })
   })
@@ -135,7 +135,7 @@ describe('G2 page layout', () => {
       paddingLength: 4,
       containerID: 1,
       containerName: 'snake-main',
-      content: ' ',
+      content: '搭讪助手\n↑ 上滑开始',
       isEventCapture: 1,
     })
   })

@@ -18,6 +18,8 @@ type GlassesFramePresenterOptions = {
   timers?: FrameTimers
 }
 
+const SOCIAL_ASSISTANT_HOME = '搭讪助手\n↑ 上滑开始'
+
 export function getGlassesPageLayout() {
   return {
     xPosition: 0,
@@ -29,7 +31,7 @@ export function getGlassesPageLayout() {
     paddingLength: 4,
     containerID: 1,
     containerName: 'snake-main',
-    content: ' ',
+    content: SOCIAL_ASSISTANT_HOME,
     isEventCapture: 1,
   }
 }
@@ -50,7 +52,7 @@ export function createCheckedGlassesWriter(options: {
 }
 
 export function formatGlassesFrame(frame: GlassesFrame) {
-  if (frame.kind === 'blank') return { content: ' ', durationMs: 0 }
+  if (frame.kind === 'blank') return { content: SOCIAL_ASSISTANT_HOME, durationMs: 0 }
   if (frame.kind === 'listening') return { content: '● 15s', durationMs: 0 }
   if (frame.kind === 'thinking') return { content: '○', durationMs: 0 }
   if (frame.kind === 'ready') return { content: '▲', durationMs: 2000 }
