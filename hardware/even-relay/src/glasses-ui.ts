@@ -69,6 +69,13 @@ export function formatGlassesFrame(frame: GlassesFrame) {
   }
 }
 
+export function frameForSocialInsight(
+  insight: { suggestion: string[] } | null,
+): GlassesFrame {
+  const lines = insight?.suggestion.filter(line => typeof line === 'string' && line.trim()) ?? []
+  return lines.length ? { kind: 'advice', lines } : { kind: 'blank' }
+}
+
 export function createGlassesFramePresenter({ render, timers = window }: GlassesFramePresenterOptions) {
   let revision = 0
   let timer: number | null = null

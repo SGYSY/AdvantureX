@@ -28,6 +28,7 @@ export function routeSocialGesture(gesture: string): 'toggle' | 'view' | 'forwar
 export class SocialCopilotController {
   private readonly fetcher: Fetcher
   private readonly timeoutMs: number
+  private readonly analysisTimeoutMs: number
   private readonly accessToken: string
   private eventEndpoint: string
   private baseUrl: string | null = null
@@ -43,16 +44,24 @@ export class SocialCopilotController {
   private inFlight = new Set<AbortController>()
   latestInsight: SocialInsight | null = null
 
-  constructor({ eventEndpoint, accessToken = '', fetcher = fetch, timeoutMs = 8_000 }: {
+  constructor({
+    eventEndpoint,
+    accessToken = '',
+    fetcher = fetch,
+    timeoutMs = 8_000,
+    analysisTimeoutMs = 65_000,
+  }: {
     eventEndpoint: string
     accessToken?: string
     fetcher?: Fetcher
     timeoutMs?: number
+    analysisTimeoutMs?: number
   }) {
     this.eventEndpoint = eventEndpoint
     this.accessToken = accessToken
     this.fetcher = fetcher
     this.timeoutMs = timeoutMs
+    this.analysisTimeoutMs = analysisTimeoutMs
   }
 
   get active() {
@@ -146,6 +155,7 @@ export class SocialCopilotController {
       const response = await this.request(
         `${baseUrl}/social/session/${sessionId}/finish`,
         { method: 'POST' },
+        this.analysisTimeoutMs,
       )
       const body = await response.json()
       if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`)
@@ -194,7 +204,11 @@ export class SocialCopilotController {
     if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`)
   }
 
-  private async request(input: RequestInfo | URL, init: RequestInit) {
+  private async request(
+    input: RequestInfo | URL,
+    init: RequestInit,
+    timeoutMs = this.timeoutMs,
+  ) {
     const controller = new AbortController()
     this.inFlight.add(controller)
     let timeout: ReturnType<typeof setTimeout> | null = null
@@ -206,7 +220,7 @@ export class SocialCopilotController {
         timeout = setTimeout(() => {
           controller.abort()
           reject(new Error('Social request timed out'))
-        }, this.timeoutMs)
+        }, timeoutMs)
       })
       return await Promise.race([pending, timeoutError])
     } finally {

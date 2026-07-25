@@ -98,6 +98,23 @@ describe('formatGlassesFrame', () => {
   })
 })
 
+describe('social analysis result frame', () => {
+  it('shows usable advice immediately instead of requiring another swipe', async () => {
+    const glassesUi = await import('../src/glasses-ui')
+    const frameForInsight = (
+      glassesUi as unknown as Record<string, unknown>
+    ).frameForSocialInsight
+
+    expect(frameForInsight).toBeTypeOf('function')
+    expect((frameForInsight as (insight: { suggestion: string[] } | null) => unknown)({
+      suggestion: ['互动正在升温', '先回应，再认真听'],
+    })).toEqual({
+      kind: 'advice',
+      lines: ['互动正在升温', '先回应，再认真听'],
+    })
+  })
+})
+
 describe('G2 page layout', () => {
   it('uses the official full 576 by 288 display canvas', async () => {
     const glassesUi = await import('../src/glasses-ui')

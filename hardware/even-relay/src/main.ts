@@ -18,6 +18,7 @@ import { RescueSequenceRecognizer } from './gesture-sequence'
 import {
   createCheckedGlassesWriter,
   createGlassesFramePresenter,
+  frameForSocialInsight,
   getGlassesPageLayout,
   type GlassesFrame,
 } from './glasses-ui'
@@ -27,7 +28,6 @@ import {
 } from './social-listening-lifecycle'
 import {
   routeSocialGesture,
-  hasUsableSocialInsight,
   shouldAppendSocialPcm,
   SocialCopilotController,
   type SocialInsight,
@@ -556,7 +556,7 @@ async function finishSocialListening() {
     })
     if (socialCopilot !== controller || run !== socialListeningRun) return
     latestSocialInsight = insight
-    await showGlassesFrame(hasUsableSocialInsight(insight) ? { kind: 'ready' } : { kind: 'blank' })
+    await showGlassesFrame(frameForSocialInsight(insight))
   } catch (error) {
     console.warn('Social analysis failed:', error)
     if (socialCopilot === controller && run === socialListeningRun) {

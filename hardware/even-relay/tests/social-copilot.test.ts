@@ -155,4 +155,53 @@ describe('SocialCopilotController', () => {
     await expect(controller.finish()).rejects.toThrow('timed out')
     expect(fetcher.mock.calls[2][0]).toContain('/social/session/session-1/cancel')
   })
+
+  it('allows realtime analysis to run longer than the eight-second upload timeout', async () => {
+    vi.useFakeTimers()
+    let resolveFinish!: (response: Response) => void
+    let finishSignal: AbortSignal | null = null
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, id: 'session-1' }), { status: 200 }))
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        finishSignal = init.signal ?? null
+        return new Promise<Response>(resolve => {
+          resolveFinish = resolve
+        })
+      })
+    const controller = new SocialCopilotController({
+      eventEndpoint: 'https://relay.example/even',
+      fetcher,
+    })
+
+    try {
+      await controller.start()
+      const result = controller.finish().then(
+        value => ({ value, error: null }),
+        error => ({ value: null, error }),
+      )
+      for (let attempt = 0; attempt < 10 && fetcher.mock.calls.length < 2; attempt += 1) {
+        await Promise.resolve()
+      }
+      expect(fetcher).toHaveBeenCalledTimes(2)
+      vi.advanceTimersByTime(10_000)
+      await Promise.resolve()
+
+      expect(finishSignal?.aborted).toBe(false)
+      resolveFinish(new Response(JSON.stringify({
+        ok: true,
+        insight: {
+          suggestion: ['互动正在升温', '先回应，再认真听'],
+          expiresAt: Date.now() + 600_000,
+        },
+      }), { status: 200 }))
+      await expect(result).resolves.toMatchObject({
+        value: {
+          suggestion: ['互动正在升温', '先回应，再认真听'],
+        },
+        error: null,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
