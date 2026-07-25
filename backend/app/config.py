@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
     call_audio_url: str = ""
+    stepfun_api_key: str = ""
+    stepfun_base_url: str = "https://api.stepfun.com/step_plan/v1"
+    stepfun_agent_model: str = "step-3.5-flash"
+    stepfun_realtime_url: str = "wss://api.stepfun.com/step_plan/v1/realtime"
+    stepfun_audio_model: str = "stepaudio-2.5-realtime"
+    dimos_mcp_url: str = "http://127.0.0.1:9990/mcp"
+    even_ingress_token: str = ""
 
 
 @lru_cache

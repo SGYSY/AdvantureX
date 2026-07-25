@@ -114,3 +114,21 @@ class VoiceReply(BaseModel):
     conversation_id: str
     text: str
     action: str | None = None
+
+
+class AgentTurnRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+
+
+class AgentConfirmRequest(BaseModel):
+    action_id: str = Field(min_length=32, max_length=32, pattern=r"^[0-9a-f]{32}$")
+
+
+class AgentTurnResponse(BaseModel):
+    message: str
+    tool_name: str | None = None
+    arguments: dict[str, Any] | None = None
+    requires_confirmation: bool
+    executed: bool
+    tool_result: str | None = None
+    action_id: str | None = None

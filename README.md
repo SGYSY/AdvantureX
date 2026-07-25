@@ -8,8 +8,8 @@ It currently implements the first four stages of the product plan:
 - Photon/Spectrum iMessage bridge, inbound message commands, and a browser simulation when credentials are absent
 - viaim-style voice-first Rescue and Coach conversations with short, interruptible responses
 - optional opt-in telephone escalation using Twilio
-
-Robot/DimOS functionality is intentionally not included.
+- StepFun Step Plan Agent planning with a confirmation-gated, stationary Go2
+  tool surface over DimOS MCP
 
 ## Repository map
 
@@ -19,6 +19,7 @@ snakeone/         Spectrum/Photon iMessage Agent
 docs/             GitHub Pages mobile call demo
 hardware/ring/    Ring prototype firmware (ready for contributors)
 hardware/glasses/ Glasses prototype firmware (ready for contributors)
+hardware/go2/     Stationary real-Go2 skills and DimOS MCP blueprint
 hardware/shared/  Shared device protocol code
 ```
 
@@ -55,6 +56,68 @@ uvicorn app.main:app --app-dir backend --reload
 ```
 
 Open <http://127.0.0.1:8000>. The application starts in demo mode, so a rescue can be scheduled and its message delivery simulated without any credentials.
+
+## SNAKE1 local Agent + ring relay + optional Go2
+
+The local topology is:
+
+```text
+Even ring -> Cloudflare -> Even relay :8788 -> Wingman :8000
+                                              |
+                                    StepFun Step Plan
+                                              |
+                                confirmed stationary tool
+                                              |
+                                      DimOS MCP :9990 -> Go2
+```
+
+Run the hidden-input configurator and paste a newly generated StepFun key plus
+the existing Go2 AES key. The resulting `.env` is ignored by Git and written
+with mode `600`:
+
+```bash
+python scripts/configure_snake1.py
+```
+
+Run a non-mutating preflight:
+
+```bash
+python scripts/start_snake1.py --check
+python scripts/start_snake1.py --check --with-go2
+```
+
+Start the local Agent, ring relay, and a temporary Cloudflare tunnel:
+
+```bash
+python scripts/start_snake1.py
+```
+
+After the Go2 AP preflight passes, start the stationary DimOS MCP blueprint too:
+
+```bash
+python scripts/start_snake1.py --with-go2
+```
+
+The launcher prints the new temporary Cloudflare hostname and an ephemeral
+`/even/<token>` path. Use the complete tokenized URL as the ring forwarding
+endpoint. Both quick-tunnel hostnames and the token can change on every launch.
+The token keeps random Internet traffic from reaching the local hardware path.
+
+Agent API:
+
+- `POST /api/v1/agent/turn` with `{"text":"让狗打个招呼"}` plans an action.
+- If `requires_confirmation` is true, display the returned action and require
+  the user to approve it.
+- `POST /api/v1/agent/confirm` with the returned `action_id` executes that exact
+  action once. Reuse is rejected.
+- Without changing the current glasses code, its existing `上滑 → 单击`
+  (`ring_confirm_up`) gesture confirms the latest proposal; `下滑 → 单击`
+  cancels it. Ring double-click remains the P0 rescue trigger.
+- Emergency stop executes immediately.
+
+See [hardware/go2/README.md](hardware/go2/README.md) for the stationary safety
+boundary. This integration does not modify the glasses implementation or the
+existing dashboard UI.
 
 The committed `environment.yml` creates the isolated environment used by this project:
 

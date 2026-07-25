@@ -6,9 +6,12 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from .agent_service import WingmanAgentService
 from .config import Settings, get_settings
-from .models import AppState, DemoCallState, DemoCallTrigger, EvenRelayPayload, InboundMessage, Rescue, RescueCreate, VoiceReply, VoiceTurn, ZiloEvent, ZiloRingEvent
+from .go2_mcp import Go2McpClient
+from .models import AgentConfirmRequest, AgentTurnRequest, AgentTurnResponse, AppState, DemoCallState, DemoCallTrigger, EvenRelayPayload, InboundMessage, Rescue, RescueCreate, VoiceReply, VoiceTurn, ZiloEvent, ZiloRingEvent
 from .orchestrator import Orchestrator
+from .stepfun_agent import StepFunAgent, StepFunApi
 from .store import Store
 
 
@@ -16,6 +19,16 @@ settings = get_settings()
 compare_secret = secrets.compare_digest
 store = Store(settings.database_path)
 orchestrator = Orchestrator(store, settings)
+agent_service = WingmanAgentService(
+    StepFunAgent(
+        StepFunApi(
+            settings.stepfun_api_key,
+            base_url=settings.stepfun_base_url,
+            model=settings.stepfun_agent_model,
+        )
+    ),
+    Go2McpClient(settings.dimos_mcp_url),
+)
 
 
 @asynccontextmanager
@@ -54,7 +67,14 @@ async def mobile_call_screen():
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "photon_mode": "live" if orchestrator.photon.live else "demo", "calling_enabled": orchestrator.phone.enabled}
+    return {
+        "ok": True,
+        "photon_mode": "live" if orchestrator.photon.live else "demo",
+        "calling_enabled": orchestrator.phone.enabled,
+        "stepfun_configured": bool(settings.stepfun_api_key),
+        "stepfun_model": settings.stepfun_agent_model,
+        "dimos_mcp_url": settings.dimos_mcp_url,
+    }
 
 
 async def proxy_to_local_relay(path: str, request: Request, client) -> Response:
@@ -162,8 +182,29 @@ async def even_ring_relay(
         configured_secret.encode("utf-8"),
     ):
         raise HTTPException(403, "Invalid X-Wingman-Secret.")
+    # The phone WebView posts to the local relay; only that loopback relay may
+    # reach this endpoint without the private dashboard API key.
     if request.client is None or request.client.host not in {"127.0.0.1", "::1"}:
         raise HTTPException(403, "The Even relay must run locally on this Mac.")
+
+    source = payload.event.get("source")
+    source_kind = source.get("kind") if isinstance(source, dict) else None
+    action_name = payload.action.get("name") if payload.action else None
+    if source_kind == "ring" and action_name == "ring_confirm_up":
+        try:
+            result = await agent_service.confirm_latest()
+            return {"ok": True, "accepted": True, "agent_action": result}
+        except ValueError as exc:
+            return {"ok": False, "accepted": False, "reason": str(exc)}
+        except httpx.HTTPError as exc:
+            raise HTTPException(503, f"DimOS MCP is unavailable: {exc}") from exc
+    if source_kind == "ring" and action_name == "ring_confirm_down":
+        cancelled = agent_service.cancel_latest()
+        return {
+            "ok": cancelled,
+            "accepted": cancelled,
+            "reason": "Pending Go2 action cancelled." if cancelled else "Pending action not found.",
+        }
     try:
         return await orchestrator.even_ring_event(payload)
     except ValueError as exc:
@@ -205,6 +246,26 @@ async def end_demo_call():
 @app.post("/api/v1/voice/turn", response_model=VoiceReply, dependencies=[Depends(auth)])
 async def voice(turn: VoiceTurn):
     return await orchestrator.voice_turn(turn.transcript, turn.conversation_id)
+
+
+@app.post("/api/v1/agent/turn", response_model=AgentTurnResponse, dependencies=[Depends(auth)])
+async def agent_turn(turn: AgentTurnRequest):
+    try:
+        return await agent_service.turn(turn.text)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        raise HTTPException(502, f"Agent planning failed: {exc}") from exc
+
+
+@app.post("/api/v1/agent/confirm", response_model=AgentTurnResponse, dependencies=[Depends(auth)])
+async def agent_confirm(request: AgentConfirmRequest):
+    try:
+        return await agent_service.confirm(request.action_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(503, f"DimOS MCP is unavailable: {exc}") from exc
 
 
 @app.post("/api/v1/photon/inbound", dependencies=[Depends(auth)])
