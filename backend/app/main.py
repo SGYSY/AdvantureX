@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 import secrets
+import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from .config import Settings, get_settings
 from .models import AppState, DemoCallState, DemoCallTrigger, EvenRelayPayload, InboundMessage, Rescue, RescueCreate, VoiceReply, VoiceTurn, ZiloEvent
@@ -54,6 +55,52 @@ async def mobile_call_screen():
 @app.get("/health")
 async def health():
     return {"ok": True, "photon_mode": "live" if orchestrator.photon.live else "demo", "calling_enabled": orchestrator.phone.enabled}
+
+
+async def proxy_to_local_relay(path: str, request: Request, client) -> Response:
+    headers = {
+        name: value
+        for name, value in request.headers.items()
+        if name.lower() in {"authorization", "content-type"}
+    }
+    upstream = await client.request(
+        request.method,
+        f"http://127.0.0.1:8788/{path}",
+        content=await request.body(),
+        headers=headers,
+    )
+    response_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    }
+    content_type = upstream.headers.get("content-type")
+    if content_type:
+        response_headers["Content-Type"] = content_type
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        headers=response_headers,
+    )
+
+
+def create_local_relay_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(timeout=70, trust_env=False)
+
+
+@app.api_route("/relay/{path:path}", methods=["POST", "OPTIONS"])
+async def relay_proxy(path: str, request: Request):
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=204,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            },
+        )
+    async with create_local_relay_client() as client:
+        return await proxy_to_local_relay(path, request, client)
 
 
 @app.get("/api/v1/state", response_model=AppState, dependencies=[Depends(auth)])
