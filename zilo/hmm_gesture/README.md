@@ -61,7 +61,7 @@ iMessage，10 秒后让手机网页进入来电状态，滑动接听后播放 MP
 
 ```bash
 conda activate wingman-zilo
-cd /Users/yansiyu/project/advanturex/zilo/hmm_gesture
+cd AdvantureX/zilo/hmm_gesture
 python ring_connect.py
 
 # 把上一条命令最后输出的 uuid 填到这里

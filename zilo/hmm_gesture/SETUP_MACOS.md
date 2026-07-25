@@ -6,7 +6,7 @@
 
 ```bash
 conda activate wingman-zilo
-cd /Users/yansiyu/project/advanturex/zilo/hmm_gesture
+cd AdvantureX/zilo/hmm_gesture
 ```
 
 需要重建环境时：

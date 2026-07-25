@@ -1,266 +1,246 @@
-# Wingman — private social-assist control plane
+# SNAKE1
 
-Wingman is a local-first FastAPI application for a discreet "rescue" workflow.
-It currently implements the first four stages of the product plan:
+**Wake your Personal Agent from the real world. Let it return to the real world and help.**
 
-- Zilo-compatible event gateway (`double_tap`, `long_press`, and voice input)
-- deterministic orchestration, scheduling, cancellation, audit trail, and SQLite persistence
-- Photon/Spectrum iMessage bridge, inbound message commands, and a browser simulation when credentials are absent
-- viaim-style voice-first Rescue and Coach conversations with short, interruptible responses
-- optional opt-in telephone escalation using Twilio
-- StepFun Step Plan Agent planning with a confirmation-gated, stationary Go2
-  tool surface over DimOS MCP
+[中文](README.zh.md) · [Live UI preview](https://sgysy.github.io/AdvantureX/) · Submission branch: `final`
 
-## Repository map
+SNAKE1 is a platform that lets a Personal Agent be triggered by physical-world
+signals and act through authorized real-world tools. A ring gesture, a short
+voice window, or a deliberate motion becomes an **Input**. The Agent interprets
+the moment, checks the owner and permission boundary, invokes a reusable
+**Real-World Skill**, and returns through iMessage, a private audio/display
+channel, a phone workflow, or a robot.
+
+> A screen-bound Agent waits for a prompt. SNAKE1 is there for the few seconds
+> when taking out a screen is exactly what you cannot do.
+
+<p align="center">
+  <img src="docs/assets/snake1-mobile-rescue.png" width="720" alt="SNAKE1 Wingman mobile rescue call">
+</p>
+
+<p align="center"><em>Wingman is SNAKE1's first Real-World Skill: message first, rescue call second.</em></p>
+
+## The 30-second demo
+
+The first Skill is intentionally simple enough to understand before we explain
+the platform:
+
+1. A date is obviously going nowhere, but leaving directly feels awkward.
+2. The user makes a trained gesture on a Zilo ring—no phone, no visible typing.
+3. The local recognizer accepts only an allowlisted gesture above the confidence
+   threshold; the backend checks its owner-only route and duplicate-trigger
+   guard.
+4. SNAKE1 sends the configured rescue message through Photon Spectrum/iMessage.
+5. Ten seconds later, the mobile demo rings so the user can leave naturally.
+
+The incoming-call screen is an honest browser-based visual/audio demo, not a
+disguised PSTN call. A separate, opt-in Twilio adapter can place a real call only
+after explicit confirmation.
+
+**Chinese easter egg:** 现实里没有吕子乔，但你可以随身带一个 Snake。
+
+## One platform, not one ring
+
+The ring is only an endpoint. The product is the closed loop:
+
+```mermaid
+flowchart LR
+    M["Real-World Moment"] --> I["Input<br/>ring · voice · gesture"]
+    I --> A["Personal Agent<br/>context · policy · permissions"]
+    A --> S["Real-World Skill<br/>trigger · decision · action · fallback"]
+    S --> O["Output<br/>iMessage · audio/display · call · robot"]
+    O --> F["Feedback + audit"]
+    F --> A
+```
+
+The four product objects are deliberately small:
+
+| Object | Responsibility | Current example |
+|---|---|---|
+| **Agent** | Understand intent, enforce policy, plan an authorized action | FastAPI control plane + StepFun planner |
+| **Inputs** | Wake the Agent privately with minimal friction | Zilo BLE/IMU gesture, Even ring, short voice turn |
+| **Skills** | Package trigger, decision, actions, timing, cancellation, and fallback | Discreet Exit, Private Coach, Robot Icebreaker |
+| **Outputs** | Return to the physical world through user-approved tools | Photon iMessage, mobile call UI, Twilio, DimOS/Go2 |
+
+## Three independent Skills
+
+| Priority | Skill | Demonstrates | Repository status |
+|---|---|---|---|
+| **P0** | **Discreet Exit** | Ring → Agent → message → delayed call workflow | End-to-end code present; Photon/Twilio require private credentials |
+| **P1** | **Private Coach** | Explicit short listening window → one concise private suggestion | Real-time capture/analysis is implemented on the Even prototype; generic voice-turn API is ready for a Future Intelligence/viaim adapter |
+| **P2** | **Robot Icebreaker** | Agent proposal → user confirmation → physical action | DimOS MCP + real Go2 adapter present, intentionally limited to stationary greeting/neutral pose/emergency stop |
+
+P0 does not depend on the headset or robot. P1 never means continuous
+listening. P2 does not expose navigation, raw velocity, following, jumping, or
+dancing in this submission.
+
+## Selected sponsor tracks
+
+We selected the four tracks that strengthen the same loop instead of inventing
+four unrelated demos:
+
+| Track | Role in SNAKE1 | What is implemented |
+|---|---|---|
+| **Photon** | Agent-native real-world messaging output | Spectrum iMessage Agent, outbound DM bridge, inbound owner commands, cancellation and delay |
+| **弦指科技 · Zilo** | Covert physical input | BLE ring connection, six-axis stream processing, HMM gesture models, confidence gate, backend bridge |
+| **Dimensional** | Embodied output | StepFun planning → one-time confirmation → allowlisted DimOS MCP tools for Unitree Go2 |
+| **未来智能 · Future Intelligence** | Private, voice-first Agent interface | Device-agnostic short-turn contract and Rescue/Coach dialogue; viaim-specific device transport remains the adapter to bind |
+
+The last row is intentionally labeled adapter-ready rather than complete. The
+repository does not claim a sponsor-device integration that is not present.
+
+## What works today
+
+| Capability | Evidence in this repository | Runtime mode |
+|---|---|---|
+| Zilo gesture input | BLE transport, recorded samples, pretrained HMM models, local bridge, 6 tests | Real hardware when paired |
+| Photon messaging | Spectrum Agent and control bridge; owner-only inbound commands | Live with Photon credentials, explicit demo mode without them |
+| Rescue orchestration | Scheduling, message-before-call timing, cancellation, timeout/status, SQLite audit trail | Local |
+| Real-time private coaching | 15-second capture lifecycle, StepFun realtime analysis, allowlisted suggestions, fail-closed relay | Real Even G2/R1 prototype |
+| Go2 physical output | StepFun tool planning, stationary safety policy, single-use confirmation, DimOS MCP client | Real robot when connected |
+| Call output | Mobile incoming-call UI plus separately configured Twilio adapter | Browser demo by default; PSTN opt-in |
+
+The repository also keeps a normalized hardware-event contract so another
+ring, earbud, glasses device, or gesture sensor can become an Input without
+receiving Photon credentials.
+
+## Architecture
 
 ```text
-backend/          FastAPI orchestration and local control dashboard
-snakeone/         Spectrum/Photon iMessage Agent
-docs/             GitHub Pages mobile call demo
-hardware/ring/    Ring prototype firmware (ready for contributors)
-hardware/glasses/ Glasses prototype firmware (ready for contributors)
-hardware/go2/     Stationary real-Go2 skills and DimOS MCP blueprint
-hardware/shared/  Shared device protocol code
+Zilo BLE / Even ring / voice turn
+              │
+              ▼
+      normalized owner event
+              │
+              ▼
+  SNAKE1 FastAPI control plane ─── SQLite audit + cancellation
+        │          │
+        │          └── StepFun planner ── confirmation gate ── DimOS MCP ── Go2
+        │
+        ├── Photon Spectrum ── iMessage
+        ├── mobile call state ── browser UI
+        └── explicit Twilio adapter ── PSTN call
 ```
 
-Hardware contributors should start with the [event contract](docs/hardware-event-contract.md)
-and [contribution guide](CONTRIBUTING.md). Device code sends normalized gestures
-to the backend; it never contains Photon credentials.
+Important boundaries:
 
-The maintained public Even G2/R1 delivery is
-[`hardware/even-relay`](hardware/even-relay). It is the same fail-closed source
-as the standalone SNAKE ONE relay: new installs have an empty endpoint/token
-and forwarding disabled; `/even` and `/social/*` require
-`RELAY_ACCESS_TOKEN`; the loopback Wingman hop requires
-`WINGMAN_SHARED_SECRET`.
+- Hardware adapters send normalized events; they never contain Photon secrets.
+- The Even relay uses an authenticated public first hop and a separate
+  loopback-only shared secret for Relay → Wingman.
+- Zilo recognition runs beside the BLE ring and reaches an owner-only local
+  endpoint.
+- Non-emergency Go2 actions require a single-use `action_id`. Emergency stop is
+  the only action allowed without confirmation.
+- Demo mode never reports a simulated message or browser call as a real
+  delivery.
 
-```bash
-cd hardware/even-relay
-npm install
-cp .env.example .env
-# Fill local-only STEPFUN_API_KEY, RELAY_ACCESS_TOKEN, and WINGMAN_SHARED_SECRET.
-npm run relay
-```
+## Quick start: credential-free demo
 
-The relay command requires `.env` and does not silently start without it.
-For a temporary public tunnel, enter the newly generated HTTPS endpoint and
-local relay token in the installed Even app. Update the endpoint after every
-tunnel restart; no temporary domain is embedded in this repository.
-
-## Quick start
+Requirements: Python 3.11+ and Node.js 22+.
 
 ```bash
-conda activate wingman-photon
+git clone --branch final https://github.com/SGYSY/AdvantureX.git
+cd AdvantureX
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
 cp .env.example .env
 uvicorn app.main:app --app-dir backend --reload
 ```
 
-Open <http://127.0.0.1:8000>. The application starts in demo mode, so a rescue can be scheduled and its message delivery simulated without any credentials.
+Open:
 
-## SNAKE1 local Agent + ring relay + optional Go2
+- Dashboard: <http://127.0.0.1:8000>
+- Mobile rescue screen: <http://127.0.0.1:8000/mobile>
+- Static UI preview: <https://sgysy.github.io/AdvantureX/>
 
-The local topology is:
+With empty provider credentials, message delivery remains clearly marked as
+`demo`; orchestration, timing, cancellation, UI, and audit behavior still run
+locally.
+
+## Real integration entry points
+
+- **Photon/iMessage:** [`snakeone/README.md`](snakeone/README.md)
+- **Zilo ring:** [`zilo/hmm_gesture/README.md`](zilo/hmm_gesture/README.md)
+- **Real-time glasses/ring relay:** [`hardware/even-relay/README.md`](hardware/even-relay/README.md)
+- **DimOS/Unitree Go2:** [`hardware/go2/README.md`](hardware/go2/README.md)
+- **Hardware event contract:** [`docs/hardware-event-contract.md`](docs/hardware-event-contract.md)
+
+Core API surface:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/hardware/zilo` | Locally recognized Zilo HMM gesture |
+| `POST /api/v1/events/zilo` | Normalized ring/voice gateway |
+| `POST /api/v1/hardware/even` | Authenticated loopback relay from Even hardware |
+| `POST /api/v1/voice/turn` | Short Rescue/Coach voice turn |
+| `POST /api/v1/agent/turn` | Plan an allowlisted physical action |
+| `POST /api/v1/agent/confirm` | Execute one exact, single-use Go2 action |
+| `POST /api/v1/photon/inbound` | Owner commands received from iMessage |
+
+## Safety and privacy
+
+“Always available” does not mean “always listening.”
+
+- Skills are created, authorized, and deliberately triggered by the user.
+- P1 captures only a short, explicit window and discards partial or expired
+  sessions.
+- The configured message recipient must be the owner or a pre-consented thread.
+- Default rescue copy is fictional and non-alarming; it avoids medical,
+  disaster, police, and family-crisis impersonation.
+- Calling is disabled until all required credentials and a public HTTPS audio
+  URL are configured, and the dashboard asks for confirmation.
+- Secrets, phone numbers, robot keys, local databases, and generated artifacts
+  stay in ignored local files.
+
+## Verification
+
+Current `final` result: **120 automated tests passing**, both Photon Spectrum
+TypeScript agents type-checking, and the Even hardware client production build
+completing.
+
+```bash
+# Backend, orchestration, Go2 policy, launcher, and security boundaries
+PYTHONPATH=backend .venv/bin/python -m pytest backend/tests -q
+
+# Mobile call state
+node --test backend/tests/mobile_ui.test.mjs
+
+# Photon Spectrum TypeScript agents
+(cd snakeone && npm ci && npx tsc --noEmit)
+(cd photon-bridge && npm ci && npm run check)
+
+# Even hardware client, realtime capture, relay, and production build
+npm ci --prefix hardware/even-relay
+npm test --prefix hardware/even-relay
+npm run test:tools --prefix hardware/even-relay
+npm run build --prefix hardware/even-relay
+
+# Zilo BLE/HMM pipeline
+.venv/bin/pip install -r zilo/hmm_gesture/requirements.lock
+PYTHONPATH=zilo/hmm_gesture .venv/bin/python -m pytest zilo/hmm_gesture/tests -q
+```
+
+## Repository map
 
 ```text
-Even ring -> Cloudflare -> Even relay :8788 -> Wingman :8000
-                                              |
-                                    StepFun Step Plan
-                                              |
-                                confirmed stationary tool
-                                              |
-                                      DimOS MCP :9990 -> Go2
+backend/                FastAPI control plane, persistence, adapters, tests
+snakeone/               Photon Spectrum iMessage Agent
+photon-bridge/          Minimal outbound/inbound Spectrum bridge
+zilo/hmm_gesture/       Zilo BLE + IMU/HMM recognition and trained samples
+hardware/even-relay/    Even G2/R1 input and short real-time coach
+hardware/go2/           Confirmation-gated DimOS/Unitree Go2 tools
+hardware/shared/        Hardware-agnostic event boundary
+docs/                   GitHub Pages mobile call UI
+scripts/                Safe integrated launcher and configuration helpers
 ```
 
-The launcher automatically prefers the active glasses relay at
-`/Users/wujiajun/Downloads/adx26/.worktrees/snake1-realtime-copilot/even` and
-does not modify that worktree. Its existing `RELAY_ACCESS_TOKEN` protects the
-public first hop, while `WINGMAN_SHARED_SECRET` protects Relay → Wingman.
+## Product boundary
 
-Run the hidden-input configurator and paste a newly generated Wingman StepFun
-key plus the existing Go2 AES key. It copies the already configured
-`WINGMAN_SHARED_SECRET` from the active Even `.env` without printing it. The
-resulting Wingman `.env` is ignored by Git and written with mode `600`:
+SNAKE1 is not a ring, an earbud, or a robot dog. It is the permissioned layer
+that lets a Personal Agent notice a user-declared real-world moment and safely
+return through the right physical tool.
 
-```bash
-python scripts/configure_snake1.py
-```
-
-Run a non-mutating preflight:
-
-```bash
-python scripts/start_snake1.py --check
-python scripts/start_snake1.py --check --with-go2
-```
-
-Start the local Agent, ring relay, and a temporary Cloudflare tunnel:
-
-```bash
-python scripts/start_snake1.py
-```
-
-After the Go2 AP preflight passes, start the stationary DimOS MCP blueprint too:
-
-```bash
-python scripts/start_snake1.py --with-go2
-```
-
-The launcher prints a temporary Cloudflare hostname. Add `/even` and use the
-active Even relay's existing access token in the phone console. Quick-tunnel
-hostnames can change on every launch. The glasses Relay remains the owner of
-StepAudio realtime sessions; Wingman uses `step-3.5-flash` only for Agent/tool
-planning, so the two backends do not duplicate the audio pipeline.
-
-Agent API:
-
-- `POST /api/v1/agent/turn` with `{"text":"让狗打个招呼"}` plans an action.
-- If `requires_confirmation` is true, display the returned action and require
-  the user to approve it.
-- `POST /api/v1/agent/confirm` with the returned `action_id` executes that exact
-  action once. Reuse is rejected.
-- Without changing the current glasses code, its existing `上滑 → 单击`
-  (`ring_confirm_up`) gesture confirms the latest proposal; `下滑 → 单击`
-  cancels it. Ring double-click remains the P0 rescue trigger.
-- Emergency stop executes immediately.
-
-See [hardware/go2/README.md](hardware/go2/README.md) for the stationary safety
-boundary. This integration does not modify the glasses implementation or the
-existing dashboard UI.
-
-The committed `environment.yml` creates the isolated environment used by this project:
-
-```bash
-conda env create -f environment.yml
-conda activate wingman-photon
-```
-
-## Real Photon iMessage and web-initiated DMs
-
-The `snakeone` Spectrum Agent owns the real iMessage identity. It also exposes
-a localhost-only control endpoint for this dashboard, so a webpage request can
-cold-start a direct message to a phone number or Apple ID.
-
-1. Create the root `.env` from `.env.example` and set:
-
-   ```env
-   USER_PHONE_NUMBER=+8613812345678
-   PHOTON_BRIDGE_URL=http://127.0.0.1:8787
-   WINGMAN_SHARED_SECRET=
-   ```
-
-   Generate a long random local value and fill it after copying the example;
-   keep the committed placeholder empty.
-
-2. In `snakeone/.env`, keep the Photon-generated `PROJECT_ID` and
-   `PROJECT_SECRET`, then add the exact same `WINGMAN_SHARED_SECRET` and:
-
-   ```env
-   WINGMAN_PORT=8787
-   ```
-
-3. Start both processes in separate terminals. In each terminal, first run
-   `conda activate wingman-photon`:
-
-   ```bash
-   # Terminal 1
-   cd /Users/yansiyu/project/advanturex/snakeone
-   npm run start
-
-   # Terminal 2
-   cd /Users/yansiyu/project/advanturex
-   uvicorn app.main:app --app-dir backend --reload
-   ```
-
-Open <http://127.0.0.1:8000>. The **主动私聊** panel schedules a real
-Spectrum iMessage DM from the Agent. The recipient must be allowed by the
-Photon line configuration; shared lines normally require the recipient to be
-added in the Photon dashboard first.
-
-## Mobile incoming-call demo
-
-Open <http://127.0.0.1:8000/mobile> on your phone (on the same Wi-Fi, use your
-Mac's LAN address instead of `127.0.0.1`). Tap **模拟眼镜 / 戒指双击**. The flow is:
-
-1. The backend asks the Spectrum Agent to send the iMessage.
-2. Five seconds later the web call screen rings with its bundled ringtone.
-3. Tap **接听** to play the bundled Chinese reminder, or choose your own MP3
-   before starting. Your selected recording stays in that browser and is never
-   uploaded to the server.
-
-The web call is intentionally a visual/audio demo, not a disguised PSTN call.
-The separate Twilio section below is the route for a real phone call.
-
-### GitHub Pages front end
-
-The `docs/` folder is ready for GitHub Pages and includes a publishing workflow.
-GitHub Pages can host the mobile screen and its audio files, but **cannot safely
-hold Photon credentials or send iMessages by itself**. Before publishing for a
-real live demo, deploy this FastAPI backend privately, put its HTTPS URL in
-`docs/config.js` as `WINGMAN_API_BASE`, and add the Pages origin to the backend:
-
-```env
-CORS_ORIGINS=https://YOUR_GITHUB_NAME.github.io
-```
-
-Leave `WINGMAN_API_BASE` blank only for a visual/static preview; the double-tap
-button then has no private service through which to send the iMessage.
-After pushing this project to a GitHub repository, enable **Settings → Pages →
-Source: GitHub Actions**. The included workflow publishes `docs/` whenever
-`main` changes.
-
-## Telephone escalation
-
-Calling is disabled by default. To enable it, set `TWILIO_ACCOUNT_SID`,
-`TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `USER_PHONE_NUMBER`, and a public
-HTTPS `CALL_AUDIO_URL`. The repository includes
-`backend/app/static/wingman-call.wav`, a short Chinese Wingman reminder. Serve
-it publicly (for example, through a temporary HTTPS tunnel or deployment) and
-set `CALL_AUDIO_URL=https://your-public-host/static/wingman-call.wav`. A call
-is only placed after the account holder explicitly clicks **确认后呼叫我** in the
-dashboard. It plays that fixed audio once, then hangs up.
-
-### Publishing the call audio for a local demo
-
-Twilio cannot reach `127.0.0.1`. Serve only the fixed audio directory in a
-third terminal, then create a temporary public HTTPS address in a fourth:
-
-```bash
-# Terminal 3: does not expose the dashboard or its API
-cd /Users/yansiyu/project/advanturex/backend/app/static
-python3 -m http.server 8080 --bind 127.0.0.1
-
-# Terminal 4
-brew install cloudflared # only needed once
-cloudflared tunnel --url http://127.0.0.1:8080
-```
-
-Copy the temporary HTTPS address it prints, then place this in the root `.env`
-and restart Uvicorn:
-
-```env
-CALL_AUDIO_URL=https://<temporary-host>/wingman-call.wav
-```
-
-For a persistent deployment, host the same WAV (or any public MP3/WAV) on a
-public HTTPS host instead of a temporary tunnel.
-
-## Device integration endpoints
-
-- `POST /api/v1/events/zilo` — ring gateway; send `{"kind":"double_tap"}`
-- `POST /api/v1/hardware/even` — loopback-only Even relay gateway
-- `POST /api/v1/voice/turn` — viaim / headset text turn
-- `POST /api/v1/photon/inbound` — bridge webhook for incoming iMessages
-- `POST /api/v1/rescues` — create a rescue from any client
-
-All endpoints use `X-Wingman-Key` when `API_KEY` is set. For a browser deployment, place the API behind an authenticated gateway; do not expose a production API key in client-side code.
-
-The Even hardware gateway has a separate fail-closed boundary. Set a non-empty
-`WINGMAN_SHARED_SECRET` in this repository's root `.env`, set the same local
-value in the Even relay environment, and run the relay on `127.0.0.1:8788`.
-The relay sends `X-Wingman-Secret`; Wingman returns `503` when its secret is
-unconfigured, `403` for a wrong secret or non-loopback caller, and only then
-processes the event. Do not put this server-to-server secret in the Even phone
-UI.
-
-## Safety model
-
-The sender must own the configured target number and use a pre-consented contact thread. Default messages say that the user requested a reminder; they do not fabricate a workplace emergency. The dashboard exposes cancellation until execution and logs all device actions.
+**Real world wakes the Agent. The Agent comes back to help.**
