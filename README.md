@@ -26,6 +26,26 @@ Hardware contributors should start with the [event contract](docs/hardware-event
 and [contribution guide](CONTRIBUTING.md). Device code sends normalized gestures
 to the backend; it never contains Photon credentials.
 
+The maintained public Even G2/R1 delivery is
+[`hardware/even-relay`](hardware/even-relay). It is the same fail-closed source
+as the standalone SNAKE ONE relay: new installs have an empty endpoint/token
+and forwarding disabled; `/even` and `/social/*` require
+`RELAY_ACCESS_TOKEN`; the loopback Wingman hop requires
+`WINGMAN_SHARED_SECRET`.
+
+```bash
+cd hardware/even-relay
+npm install
+cp .env.example .env
+# Fill local-only STEPFUN_API_KEY, RELAY_ACCESS_TOKEN, and WINGMAN_SHARED_SECRET.
+npm run relay
+```
+
+The relay command requires `.env` and does not silently start without it.
+For a temporary public tunnel, enter the newly generated HTTPS endpoint and
+local relay token in the installed Even app. Update the endpoint after every
+tunnel restart; no temporary domain is embedded in this repository.
+
 ## Quick start
 
 ```bash
@@ -143,11 +163,11 @@ brew install cloudflared # only needed once
 cloudflared tunnel --url http://127.0.0.1:8080
 ```
 
-Copy the `https://…trycloudflare.com` address it prints, then place this in the
-root `.env` and restart Uvicorn:
+Copy the temporary HTTPS address it prints, then place this in the root `.env`
+and restart Uvicorn:
 
 ```env
-CALL_AUDIO_URL=https://your-tunnel.trycloudflare.com/wingman-call.wav
+CALL_AUDIO_URL=https://<temporary-host>/wingman-call.wav
 ```
 
 For a persistent deployment, host the same WAV (or any public MP3/WAV) on a

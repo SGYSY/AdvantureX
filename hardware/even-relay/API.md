@@ -1,6 +1,6 @@
 # Even R1 Relay — HTTP API Specification
 
-> **Schema version:** `even-r1-relay/v1`
+> **Event schema version:** `even-r1-relay/v1`。社交副驾驶使用本文件定义的会话端点与 JSON 音频段请求体。
 > **Last updated:** 2026-07-23
 
 ---
@@ -36,16 +36,26 @@ Mac Relay Server (:8788)
 | **Content-Type** | `application/json` |
 | **CORS** | `Access-Control-Allow-Origin: *` |
 
-### 2.2 直连硬件 (No-CORS 模式)
+### 2.2 社交副驾驶 (Relay 侧实时分析)
 
-| 属性 | 值 |
-|------|-----|
-| **URL** | `http://<hardware-ip>:<port>/even` (自定义) |
-| **Method** | `POST` |
-| **Content-Type** | `text/plain;charset=UTF-8` |
-| **CORS** | 无需（fire-and-forget，不等待响应） |
+```text
+POST /social/session/start
+POST /social/session/{id}/chunk
+POST /social/session/{id}/finish
+POST /social/session/{id}/cancel
 
-> 硬件端无需实现 CORS，body 仍是 JSON 字符串，只是 Content-Type 标记为 text/plain 以绕过浏览器预检。
+PCM format: signed 16-bit little-endian, mono, 16 kHz.
+Maximum active capture: 15 seconds.
+Finish grace after capture deadline: 2 seconds.
+Maximum chunk: 64,000 decoded bytes.
+Maximum session: 640,000 decoded bytes.
+Maximum concurrent sessions for the single configured token: 2.
+Raw PCM is discarded after finish, expiry, or failure.
+```
+
+`start` 创建一次短暂的分析会话并安排准备期过期 timer；首个有效 `chunk` 将 timer 重置为严格 15 秒采集窗口加 2 秒收尾宽限，`chunk` 接收按顺序编号的 Base64 PCM 数据；采集截止后不再接受音频，`finish` 可在宽限内结束并返回分析结果；`cancel` 幂等取消。即使客户端断线且不再请求，timer 也会主动关闭 Provider 并删除会话。最近建议只保存在 Even 客户端内存中。会话失败、过期或任一音频校验失败时，Relay 会立即关闭 Provider 并丢弃已缓存的原始 PCM。
+
+`RELAY_ACCESS_TOKEN` 代表这个 Relay 的单一用户/owner；所有会话端点与 `/even` 都要求完全相同的 Bearer token。Relay 同时最多保留 2 个会话，并继续执行请求体、单段 PCM 和累计 PCM 上限。
 
 ---
 
@@ -57,6 +67,7 @@ Mac Relay Server (:8788)
 POST /even HTTP/1.1
 Host: <relay-or-hardware-ip>:8788
 Content-Type: application/json
+Authorization: Bearer <RELAY_ACCESS_TOKEN>
 ```
 
 ### 3.2 Payload Schema
@@ -237,8 +248,38 @@ Content-Type: application/json
 | `ring_cancel_or_shortcut` | double_click | 0.80 | 取消/快捷操作 |
 | `ring_previous` | swipe_up | 0.75 | 上一个 |
 | `ring_next` | swipe_down | 0.75 | 下一个 |
+| `snake1_rescue` | click → double_click → click | 1 | P0 救场 |
 
 > 当序列不匹配任何组合时，`action` 为 `null`。
+
+---
+
+## 6.5 社交副驾驶音频 Schema
+
+Even Hub SDK 提供原始 PCM（`audioEvent.audioPcm`，`Uint8Array`），而非可保存的转写文本。客户端把数据作为短时、单次会话送往 Relay 的实时分析接口；首个有效音频段开始后，每个会话最多活跃 15 秒。
+
+### 6.5.1 创建会话 → `POST /social/session/start`
+
+响应携带 Relay 分配的 `id`，后续的音频段必须发送给这个 ID。
+
+### 6.5.2 上传音频段 → `POST /social/session/{id}/chunk`
+
+```jsonc
+{
+  "seq": 0,                 // 从 0 开始、严格递增
+  "pcmBase64": "..."       // PCM S16LE、mono、16 kHz；解码后最多 64,000 字节
+}
+```
+
+单个会话累计解码数据最多 640,000 字节。Relay 不将 PCM 写入磁盘，并会在 `finish`、会话过期或任意失败后清除内存中的原始数据。
+
+### 6.5.3 完成会话 → `POST /social/session/{id}/finish`
+
+结束采集、请求实时模型分析，并返回最新 insight。首个 PCM 后 15 秒是严格音频上传截止线，`finish` 额外允许 2 秒无音频收尾；超过宽限会话会被关闭并删除。若音频不足或 Provider 不可用，Relay 返回受控的 `422` 错误；公开响应中不包含凭证、原始 PCM 或内部 `reason` 诊断。
+
+### 6.5.4 取消会话 → `POST /social/session/{id}/cancel`
+
+幂等关闭并删除未完成会话。下滑读取 Even 客户端内存中的 `latestInsight`，不会发起公网读取请求。
 
 ---
 
@@ -266,12 +307,6 @@ Content-Type: application/json; charset=utf-8
 
 {"ok": false, "error": "FORWARD_URL returned HTTP 502"}
 ```
-
-### 7.3 No-CORS 模式
-
-无响应体（opaque response），硬件端无需返回任何内容。
-
----
 
 ## 8. Full Example
 
@@ -354,7 +389,7 @@ Content-Type: application/json; charset=utf-8
 
 ## 9. Hardware Integration Guide
 
-### 9.1 ESP32 / Arduino (No-CORS 直连)
+### 9.1 ESP32 / Arduino（作为 Relay 的 `FORWARD_URL`）
 
 ```cpp
 #include <WiFi.h>
@@ -399,7 +434,7 @@ void loop() {
     // 下一个
   }
 
-  // 返回 200（No-CORS 模式下可省略）
+  // Relay 要求目标明确返回 2xx
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: application/json");
   client.println();
@@ -481,11 +516,16 @@ http.createServer((req, res) => {
 | 环境变量 | 默认值 | 含义 |
 |----------|--------|------|
 | `PORT` | `8788` | Relay 监听端口 |
-| `FORWARD_URL` | *(空)* | 二级转发目标 URL（留空则仅接收） |
-| `MAX_BODY_BYTES` | `1048576` | 最大请求体字节数 |
+| `FORWARD_URL` | *(空)* | 二级事件转发目标 URL；留空则仅接收 |
+| `RELAY_ACCESS_TOKEN` | *(空，服务不可用)* | `/even` 与 `/social/*` 的单用户 Bearer token |
+| `WINGMAN_SHARED_SECRET` | *(空)* | Relay 转发到 Wingman 时使用的 `X-Wingman-Secret` |
+| `STEPFUN_API_KEY` | *(空)* | StepFun 实时分析凭证；只保存在本地忽略的 `.env` |
+| `STEPFUN_MODEL` | `stepaudio-2.5-realtime` | StepFun 实时模型 |
+| `STEPFUN_REALTIME_URL` | `wss://api.stepfun.com/step_plan/v1/realtime` | StepFun 实时 WebSocket 地址 |
+| `MAX_BODY_BYTES` | `4194304` | HTTP 请求体最大字节数 |
 
 ```bash
-# 仅接收，不转发
+# 仅接收，不转发（先在 .env 配置本地 token）
 npm run relay
 
 # 接收并转发到硬件
@@ -503,10 +543,13 @@ PORT=9000 npm run relay
 |------|-------------|---------------|
 | 正常接收 | 200 | `{"ok": true, "forwarded": false}` |
 | 正常接收 + 已转发 | 200 | `{"ok": true, "forwarded": true}` |
-| 非 POST 或路径错误 | 404 | `{"ok": false, "error": "POST /even expected"}` |
-| JSON 解析失败 | 500 | `{"ok": false, "error": "<message>"}` |
+| Relay token 未配置 | 503 | `{"ok": false, "error": "Relay access token is not configured"}` |
+| Bearer token 缺失或错误 | 401 | `{"ok": false, "error": "Unauthorized"}` |
+| 非法路径或方法 | 404 | `{"ok": false, "error": "..."}` |
+| 社交副驾驶未配置 | 503 | `{"ok": false, "error": "Social copilot unavailable"}` |
+| PCM 过大、无效会话或 Provider/音频错误 | 422 | `{"ok": false, "error": "<message>"}` |
 | FORWARD_URL 不可达 | 500 | `{"ok": false, "error": "FORWARD_URL returned HTTP <code>"}` |
-| 请求体超限 | 500 | `{"ok": false, "error": "Request body exceeded <bytes> bytes"}` |
+| 请求体超限 | 422 | `{"ok": false, "error": "Request body exceeded <bytes> bytes"}` |
 
 ---
 
@@ -517,7 +560,7 @@ Relay server 所有响应均包含：
 ```
 Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: POST, OPTIONS
-Access-Control-Allow-Headers: Content-Type
+Access-Control-Allow-Headers: Authorization, Content-Type
 ```
 
 `OPTIONS` 预检请求返回 `204 No Content`。
@@ -530,6 +573,7 @@ Access-Control-Allow-Headers: Content-Type
 ┌─────────────────────────────────────────────────────┐
 │  Endpoint:  POST /even                              │
 │  Content-Type: application/json                     │
+│  Authorization: Bearer <local token>                 │
 │                                                     │
 │  Key Fields:                                        │
 │    event.gesture    → "ring.click"                  │
