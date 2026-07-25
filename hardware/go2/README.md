@@ -1,7 +1,14 @@
-# SNAKE1 stationary Go2 integration
+# Experimental SNAKE1 → Go2 scaffold
 
-This blueprint connects Wingman to a real Go2 through DimOS MCP without adding
-another LLM inside DimOS. StepFun remains the only Agent brain.
+This directory is an **unverified integration attempt**, not a completed
+hardware demo. The Even glasses path has not been connected to Dimensional or
+Go2, and no Even event currently causes a robot action. The on-site Go2 demo is
+manual teleoperation.
+
+The code explores how Wingman could call a real Go2 through DimOS MCP without
+adding another LLM inside DimOS. Unit tests cover the software policy and MCP
+request shape only; they do not prove physical connectivity, autonomous
+behavior, or an Even → Agent → Go2 closed loop.
 
 The MCP surface is intentionally limited to:
 
@@ -13,11 +20,16 @@ There is no navigation, raw velocity, following, jumping, flipping, or dancing
 tool in this blueprint. Non-emergency physical actions require a one-time
 Wingman `action_id` confirmation.
 
-The current Even gesture protocol already provides confirmation without a
-glasses-code change: `ring_confirm_up` confirms the latest proposal and
-`ring_confirm_down` cancels it. Ring double-click remains reserved for P0 rescue.
+The proposed mapping would reuse the current Even gesture protocol:
+`ring_confirm_up` would confirm the latest proposal and `ring_confirm_down`
+would cancel it, while ring double-click remains reserved for P0 rescue. This
+mapping exists in software only and has not been validated on the combined
+Even + DimOS + Go2 hardware path.
 
-## Start safely
+## Development preflight
+
+The following commands are for continuing integration work. A successful
+preflight is not evidence that the end-to-end hardware path works.
 
 Connect Mac Wi-Fi to the Go2 AP first. Keep iPhone USB connected for StepFun
 internet access. Put the local AES key in `wingman/.env`, then run:

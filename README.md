@@ -4,12 +4,13 @@
 
 [中文](README.zh.md) · [Live UI preview](https://sgysy.github.io/AdvantureX/) · Submission branch: `final`
 
-SNAKE1 is a platform that lets a Personal Agent be triggered by physical-world
-signals and act through authorized real-world tools. A ring gesture, a short
+SNAKE1 is a platform prototype designed to let a Personal Agent be triggered by
+physical-world signals and act through authorized real-world tools. A ring gesture, a short
 voice window, or a deliberate motion becomes an **Input**. The Agent interprets
 the moment, checks the owner and permission boundary, invokes a reusable
-**Real-World Skill**, and returns through iMessage, a private audio/display
-channel, a phone workflow, or a robot.
+**Real-World Skill**. The intended Output can be iMessage, a private
+audio/display channel, a phone workflow, or a robot; only the message/call
+paths are part of the current closed-loop demo.
 
 > A screen-bound Agent waits for a prompt. SNAKE1 is there for the few seconds
 > when taking out a screen is exactly what you cannot do.
@@ -41,7 +42,7 @@ after explicit confirmation.
 
 ## One platform, not one ring
 
-The ring is only an endpoint. The product is the closed loop:
+The ring is only an endpoint. The target product is the closed loop:
 
 ```mermaid
 flowchart LR
@@ -60,19 +61,24 @@ The four product objects are deliberately small:
 | **Agent** | Understand intent, enforce policy, plan an authorized action | FastAPI control plane + StepFun planner |
 | **Inputs** | Wake the Agent privately with minimal friction | Zilo BLE/IMU gesture, Even ring, short voice turn |
 | **Skills** | Package trigger, decision, actions, timing, cancellation, and fallback | Discreet Exit, Private Coach, Robot Icebreaker |
-| **Outputs** | Return to the physical world through user-approved tools | Photon iMessage, mobile call UI, Twilio, DimOS/Go2 |
+| **Outputs** | Return to the physical world through user-approved tools | Photon iMessage, mobile call UI, Twilio; DimOS/Go2 is an experimental target |
 
 ## Three independent Skills
 
 | Priority | Skill | Demonstrates | Repository status |
 |---|---|---|---|
 | **P0** | **Discreet Exit** | Ring → Agent → message → delayed call workflow | End-to-end code present; Photon/Twilio require private credentials |
-| **P1** | **Private Coach** | Explicit short listening window → one concise private suggestion | Real-time capture/analysis is implemented on the Even prototype; generic voice-turn API is ready for a Future Intelligence/viaim adapter |
-| **P2** | **Robot Icebreaker** | Agent proposal → user confirmation → physical action | DimOS MCP + real Go2 adapter present, intentionally limited to stationary greeting/neutral pose/emergency stop |
+| **P1** | **Private Coach** | Explicit short listening window → one concise private suggestion | Real-time capture/analysis exists as an isolated Even prototype; generic voice-turn API is ready for a Future Intelligence/viaim adapter |
+| **P2** | **Robot Icebreaker** | Agent proposal → user confirmation → physical action | **Not completed end to end.** The current robot demo is manual teleoperation; the repository contains only an unverified integration scaffold |
 
 P0 does not depend on the headset or robot. P1 never means continuous
-listening. P2 does not expose navigation, raw velocity, following, jumping, or
-dancing in this submission.
+listening.
+
+> **Current hardware reality:** the Even glasses path and the Dimensional/Go2
+> path are separate. No Even event currently triggers a Go2 action, and the
+> robot is not operating as an autonomous SNAKE1 Agent. Today it is
+> remote-controlled by a human. Files under `hardware/go2/` describe the
+> attempted next step, not a completed demo.
 
 ## Selected sponsor tracks
 
@@ -83,11 +89,12 @@ four unrelated demos:
 |---|---|---|
 | **Photon** | Agent-native real-world messaging output | Spectrum iMessage Agent, outbound DM bridge, inbound owner commands, cancellation and delay |
 | **弦指科技 · Zilo** | Covert physical input | BLE ring connection, six-axis stream processing, HMM gesture models, confidence gate, backend bridge |
-| **Dimensional** | Embodied output | StepFun planning → one-time confirmation → allowlisted DimOS MCP tools for Unitree Go2 |
+| **Dimensional** | Planned embodied output | Current on-site capability is manual Go2 teleoperation. StepFun/DimOS code is experimental and has not been validated as an Even → Agent → robot chain |
 | **未来智能 · Future Intelligence** | Private, voice-first Agent interface | Device-agnostic short-turn contract and Rescue/Coach dialogue; viaim-specific device transport remains the adapter to bind |
 
-The last row is intentionally labeled adapter-ready rather than complete. The
-repository does not claim a sponsor-device integration that is not present.
+The Dimensional and Future Intelligence rows are intentionally labeled as
+incomplete or adapter-ready. The repository does not claim a sponsor-device
+integration that is not present.
 
 ## What works today
 
@@ -96,30 +103,25 @@ repository does not claim a sponsor-device integration that is not present.
 | Zilo gesture input | BLE transport, recorded samples, pretrained HMM models, local bridge, 6 tests | Real hardware when paired |
 | Photon messaging | Spectrum Agent and control bridge; owner-only inbound commands | Live with Photon credentials, explicit demo mode without them |
 | Rescue orchestration | Scheduling, message-before-call timing, cancellation, timeout/status, SQLite audit trail | Local |
-| Real-time private coaching | 15-second capture lifecycle, StepFun realtime analysis, allowlisted suggestions, fail-closed relay | Real Even G2/R1 prototype |
-| Go2 physical output | StepFun tool planning, stationary safety policy, single-use confirmation, DimOS MCP client | Real robot when connected |
+| Real-time private coaching | 15-second capture lifecycle, StepFun realtime analysis, allowlisted suggestions, fail-closed relay | Isolated Even G2/R1 prototype; no Go2 connection |
+| Dimensional / Go2 | Manual remote-control demo plus an experimental StepFun/DimOS adapter scaffold | **Not connected to Even; not validated as autonomous Agent output** |
 | Call output | Mobile incoming-call UI plus separately configured Twilio adapter | Browser demo by default; PSTN opt-in |
 
 The repository also keeps a normalized hardware-event contract so another
 ring, earbud, glasses device, or gesture sensor can become an Input without
 receiving Photon credentials.
 
-## Architecture
+## Current and target architecture
 
 ```text
-Zilo BLE / Even ring / voice turn
-              │
-              ▼
-      normalized owner event
-              │
-              ▼
-  SNAKE1 FastAPI control plane ─── SQLite audit + cancellation
-        │          │
-        │          └── StepFun planner ── confirmation gate ── DimOS MCP ── Go2
-        │
-        ├── Photon Spectrum ── iMessage
-        ├── mobile call state ── browser UI
-        └── explicit Twilio adapter ── PSTN call
+VALIDATED SOFTWARE / DEMO PATH
+Zilo or Even prototype ──► SNAKE1 control plane ──► Photon / mobile call UI
+
+CURRENT ROBOT PATH
+human operator ──► remote control ──► Go2
+
+TARGET PATH — NOT COMPLETED
+Even glasses ──► SNAKE1 Agent ──► permission gate ──► DimOS ──► Go2
 ```
 
 Important boundaries:
@@ -129,8 +131,9 @@ Important boundaries:
   loopback-only shared secret for Relay → Wingman.
 - Zilo recognition runs beside the BLE ring and reaches an owner-only local
   endpoint.
-- Non-emergency Go2 actions require a single-use `action_id`. Emergency stop is
-  the only action allowed without confirmation.
+- The experimental Go2 code defines a single-use `action_id` and emergency-stop
+  policy, but software policy tests are not evidence of a working physical
+  Even-to-Go2 integration.
 - Demo mode never reports a simulated message or browser call as a real
   delivery.
 
@@ -160,12 +163,12 @@ With empty provider credentials, message delivery remains clearly marked as
 `demo`; orchestration, timing, cancellation, UI, and audit behavior still run
 locally.
 
-## Real integration entry points
+## Implementation and experiment entry points
 
 - **Photon/iMessage:** [`snakeone/README.md`](snakeone/README.md)
 - **Zilo ring:** [`zilo/hmm_gesture/README.md`](zilo/hmm_gesture/README.md)
 - **Real-time glasses/ring relay:** [`hardware/even-relay/README.md`](hardware/even-relay/README.md)
-- **DimOS/Unitree Go2:** [`hardware/go2/README.md`](hardware/go2/README.md)
+- **Experimental DimOS/Unitree Go2 scaffold:** [`hardware/go2/README.md`](hardware/go2/README.md)
 - **Hardware event contract:** [`docs/hardware-event-contract.md`](docs/hardware-event-contract.md)
 
 Core API surface:
@@ -176,8 +179,8 @@ Core API surface:
 | `POST /api/v1/events/zilo` | Normalized ring/voice gateway |
 | `POST /api/v1/hardware/even` | Authenticated loopback relay from Even hardware |
 | `POST /api/v1/voice/turn` | Short Rescue/Coach voice turn |
-| `POST /api/v1/agent/turn` | Plan an allowlisted physical action |
-| `POST /api/v1/agent/confirm` | Execute one exact, single-use Go2 action |
+| `POST /api/v1/agent/turn` | Experimental planner contract for an allowlisted physical action |
+| `POST /api/v1/agent/confirm` | Experimental confirmation contract; not hardware-validated end to end |
 | `POST /api/v1/photon/inbound` | Owner commands received from iMessage |
 
 ## Safety and privacy
@@ -199,7 +202,8 @@ Core API surface:
 
 Current `final` result: **120 automated tests passing**, both Photon Spectrum
 TypeScript agents type-checking, and the Even hardware client production build
-completing.
+completing. These tests validate software contracts; they do **not** prove that
+Even glasses can trigger DimOS/Go2 or that the robot acts autonomously.
 
 ```bash
 # Backend, orchestration, Go2 policy, launcher, and security boundaries
@@ -231,10 +235,10 @@ snakeone/               Photon Spectrum iMessage Agent
 photon-bridge/          Minimal outbound/inbound Spectrum bridge
 zilo/hmm_gesture/       Zilo BLE + IMU/HMM recognition and trained samples
 hardware/even-relay/    Even G2/R1 input and short real-time coach
-hardware/go2/           Confirmation-gated DimOS/Unitree Go2 tools
+hardware/go2/           Experimental, unverified DimOS/Unitree Go2 scaffold
 hardware/shared/        Hardware-agnostic event boundary
 docs/                   GitHub Pages mobile call UI
-scripts/                Safe integrated launcher and configuration helpers
+scripts/                Experimental launcher and configuration helpers
 ```
 
 ## Product boundary

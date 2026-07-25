@@ -4,13 +4,14 @@
 
 **Goal:** Publish a truthful, judge-friendly, bilingual SNAKE1 submission on the public `final` branch of `SGYSY/AdvantureX`.
 
-**Architecture:** Keep one demonstrable closed loop—physical trigger → personal Agent → authorized Skill → real-world output—as the lead story. Integrate the already-developed Zilo gesture pipeline and stationary DimOS/Go2 adapter into the latest hardware branch, then document Photon, Zilo, Dimensional, and Future Intelligence as four interfaces to the same platform.
+**Architecture:** Keep one demonstrable P0 loop—physical trigger → personal Agent → authorized message/call output—as the lead story. Include the Zilo gesture pipeline and the experimental DimOS/Go2 scaffold, while explicitly stating that Even and Dimensional are not connected and the current robot demo is manual teleoperation.
 
 **Tech Stack:** FastAPI, SQLite, TypeScript, Photon Spectrum/iMessage, Zilo BLE + HMM gestures, Even Hub, StepFun realtime audio, DimOS MCP, Unitree Go2, Twilio optional escalation.
 
 ## Global Constraints
 
 - The P0 demo must remain independently runnable without the headset or robot dog.
+- Never describe the experimental Go2 scaffold as a completed, autonomous, or Even-triggered hardware integration.
 - Do not claim that a browser-simulated incoming call is a PSTN call.
 - Distinguish verified integrations from optional or adapter-ready paths.
 - Keep credentials and phone numbers out of Git.
@@ -38,7 +39,7 @@
 
 **Interfaces:**
 - Consumes: normalized Zilo gesture events, the existing FastAPI orchestration layer, StepFun chat completions, and a local DimOS MCP endpoint.
-- Produces: `POST /api/v1/events/zilo`, a stationary/safety-gated Go2 action adapter, and one launcher for the integrated demo.
+- Produces: `POST /api/v1/events/zilo`, an experimental stationary/safety-gated Go2 adapter, and a launcher scaffold that is not hardware-validated end to end.
 
 - [ ] **Step 1: Apply the existing Zilo integration commit**
 
@@ -59,7 +60,7 @@ git cherry-pick 40b1522323b62e5d6966f70baa12b0b5bbd134c4
 git cherry-pick 65f1beb2e689a3f633205e29d7380b35e6fd6971
 ```
 
-Expected: the stationary DimOS/Go2 adapter, StepFun Agent service, configuration helper, launcher, and tests are present. Keep the latest `hardware/even-relay` behavior when resolving overlaps.
+Expected: the experimental stationary DimOS/Go2 adapter, StepFun Agent service, configuration helper, launcher, and software tests are present. Keep the latest `hardware/even-relay` behavior when resolving overlaps; do not claim the two paths are connected.
 
 - [ ] **Step 3: Verify the integrated backend and hardware**
 
@@ -76,7 +77,7 @@ npm run test:tools --prefix hardware/even-relay
 npm run build --prefix hardware/even-relay
 ```
 
-Expected: every suite exits `0`; the Even build completes.
+Expected: every suite exits `0`; the Even build completes. This verifies software contracts only, not Even-to-Go2 hardware integration.
 
 ### Task 2: Write the bilingual judge-facing README
 
