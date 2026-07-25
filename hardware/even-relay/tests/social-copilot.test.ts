@@ -85,6 +85,11 @@ describe('SocialCopilotController', () => {
     expect(routeSocialGesture('ring.click')).toBe('forward')
   })
 
+  it('routes source-less SDK text swipe events by their gesture type', () => {
+    expect(routeSocialGesture('unknown.swipe_up')).toBe('toggle')
+    expect(routeSocialGesture('unknown.swipe_down')).toBe('view')
+  })
+
   it('treats low-confidence or empty completion output as blank', () => {
     expect(hasUsableSocialInsight(null)).toBe(false)
     expect(hasUsableSocialInsight({ suggestion: [], expiresAt: Date.now() + 1_000 })).toBe(false)

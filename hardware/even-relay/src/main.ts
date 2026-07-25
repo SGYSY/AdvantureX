@@ -15,7 +15,12 @@ import {
   type LaunchSource,
 } from '@evenrealities/even_hub_sdk'
 import { RescueSequenceRecognizer } from './gesture-sequence'
-import { createGlassesFramePresenter, type GlassesFrame } from './glasses-ui'
+import {
+  createCheckedGlassesWriter,
+  createGlassesFramePresenter,
+  getGlassesPageLayout,
+  type GlassesFrame,
+} from './glasses-ui'
 import { stopGlassesAudio } from './social-listening-lifecycle'
 import {
   routeSocialGesture,
@@ -179,15 +184,22 @@ let socialListeningState: SocialListeningState = 'idle'
 let socialCopilot: SocialCopilotController | null = null
 let socialListeningRun = 0
 let latestSocialInsight: SocialInsight | null = null
-const glassesFramePresenter = createGlassesFramePresenter({
-  render: async content => {
-    if (!bridge || !glassesReady) return
-    await bridge.textContainerUpgrade(new TextContainerUpgrade({
+const writeGlassesText = createCheckedGlassesWriter({
+  update: async content => {
+    if (!bridge || !glassesReady) return false
+    return bridge.textContainerUpgrade(new TextContainerUpgrade({
       containerID: 1,
       containerName: 'snake-main',
       content,
     }))
   },
+  report: diagnostic => {
+    glassesDiagnostic = `页面已创建；${diagnostic}`
+    renderDiagnostics()
+  },
+})
+const glassesFramePresenter = createGlassesFramePresenter({
+  render: writeGlassesText,
 })
 
 const app = byId<HTMLDivElement>('app')
@@ -426,19 +438,7 @@ async function loadDeviceInfo() {
 async function createGlassesPage() {
   if (!bridge) return
 
-  const mainText = new TextContainerProperty({
-    xPosition: 96,
-    yPosition: 84,
-    width: 384,
-    height: 120,
-    borderWidth: 0,
-    borderColor: 15,
-    paddingLength: 12,
-    containerID: 1,
-    containerName: 'snake-main',
-    content: ' ',
-    isEventCapture: 1,
-  })
+  const mainText = new TextContainerProperty(getGlassesPageLayout())
 
   const result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
@@ -980,11 +980,19 @@ function readConfigFromControls(): ForwardConfig {
 }
 
 function loadConfig(): ForwardConfig {
-  const fallback: ForwardConfig = {
+  const secureDefaults: ForwardConfig = {
     endpoint: '',
     accessToken: '',
     enabled: false,
     includeRaw: true,
+  }
+  const buildEndpoint = import.meta.env.VITE_DEFAULT_FORWARD_URL?.trim() ?? ''
+  const buildAccessToken = import.meta.env.VITE_DEFAULT_RELAY_TOKEN ?? ''
+  const fallback: ForwardConfig = {
+    ...secureDefaults,
+    endpoint: buildEndpoint || secureDefaults.endpoint,
+    accessToken: buildAccessToken || secureDefaults.accessToken,
+    enabled: Boolean(buildEndpoint && buildAccessToken),
   }
 
   try {

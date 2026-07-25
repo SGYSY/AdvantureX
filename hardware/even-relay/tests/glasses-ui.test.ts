@@ -20,7 +20,7 @@ describe('formatGlassesFrame', () => {
     })
     expect(formatGlassesFrame({ kind: 'rescue' })).toEqual({
       content: '■ 已收到',
-      durationMs: 2000,
+      durationMs: 6000,
     })
   })
 
@@ -95,5 +95,59 @@ describe('formatGlassesFrame', () => {
     await vi.waitFor(() => expect(renders).toEqual(['● 15s', '▲', '○', '▼ 上滑']))
     pending[3].resolve()
     await recovery
+  })
+})
+
+describe('G2 page layout', () => {
+  it('uses the official full 576 by 288 display canvas', async () => {
+    const glassesUi = await import('../src/glasses-ui')
+    const getLayout = (glassesUi as unknown as Record<string, unknown>).getGlassesPageLayout
+
+    expect(getLayout).toBeTypeOf('function')
+    expect((getLayout as () => unknown)()).toEqual({
+      xPosition: 0,
+      yPosition: 0,
+      width: 576,
+      height: 288,
+      borderWidth: 0,
+      borderColor: 5,
+      paddingLength: 4,
+      containerID: 1,
+      containerName: 'snake-main',
+      content: ' ',
+      isEventCapture: 1,
+    })
+  })
+})
+
+describe('G2 text writer', () => {
+  it('reports a successful native text update', async () => {
+    const glassesUi = await import('../src/glasses-ui')
+    const createWriter = (glassesUi as unknown as Record<string, unknown>).createCheckedGlassesWriter
+    const diagnostics: string[] = []
+
+    expect(createWriter).toBeTypeOf('function')
+    const write = (createWriter as (options: {
+      update: (content: string) => Promise<boolean>
+      report: (diagnostic: string) => void
+    }) => (content: string) => Promise<void>)({
+      update: async () => true,
+      report: diagnostic => diagnostics.push(diagnostic),
+    })
+
+    await expect(write('■ 已收到')).resolves.toBeUndefined()
+    expect(diagnostics).toEqual(['textContainerUpgrade 成功'])
+  })
+
+  it('reports and rejects a failed native text update', async () => {
+    const { createCheckedGlassesWriter } = await import('../src/glasses-ui')
+    const diagnostics: string[] = []
+    const write = createCheckedGlassesWriter({
+      update: async () => false,
+      report: diagnostic => diagnostics.push(diagnostic),
+    })
+
+    await expect(write('■ 已收到')).rejects.toThrow('textContainerUpgrade 失败')
+    expect(diagnostics).toEqual(['textContainerUpgrade 失败'])
   })
 })

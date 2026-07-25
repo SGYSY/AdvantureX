@@ -11,3 +11,10 @@ test('new Even installs require an explicit relay URL and local access token', a
   assert.match(source, /enabled: false/)
   assert.match(source, /id="access-token" type="password"/)
 })
+
+test('demo builds can inject forwarding defaults without hard-coding them', async () => {
+  const source = await readFile(new URL('../src/main.ts', import.meta.url), 'utf8')
+
+  assert.match(source, /VITE_DEFAULT_FORWARD_URL/)
+  assert.match(source, /VITE_DEFAULT_RELAY_TOKEN/)
+})

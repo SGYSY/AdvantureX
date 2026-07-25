@@ -20,8 +20,8 @@ export function shouldAppendSocialPcm(
 }
 
 export function routeSocialGesture(gesture: string): 'toggle' | 'view' | 'forward' {
-  if (gesture === 'ring.swipe_up') return 'toggle'
-  if (gesture === 'ring.swipe_down') return 'view'
+  if (gesture.endsWith('.swipe_up')) return 'toggle'
+  if (gesture.endsWith('.swipe_down')) return 'view'
   return 'forward'
 }
 
