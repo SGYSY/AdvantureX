@@ -30,6 +30,7 @@ import {
 import {
   routeSocialGesture,
   shouldAppendSocialPcm,
+  socialFailureGesture,
   SocialCopilotController,
   type SocialInsight,
   type SocialListeningState,
@@ -537,6 +538,7 @@ async function toggleSocialListening() {
     }, 15_000)
   } catch (error) {
     console.warn('Social listening failed to start:', error)
+    reportSocialFailure('start', error)
     await resetSocialListening(controller, run)
     await showGlassesFrame({ kind: 'error' })
   }
@@ -560,6 +562,7 @@ async function finishSocialListening() {
     await showGlassesFrame(frameForSocialInsight(insight))
   } catch (error) {
     console.warn('Social analysis failed:', error)
+    reportSocialFailure('finish', error)
     if (socialCopilot === controller && run === socialListeningRun) {
       await showGlassesFrame(frameForSocialFailure(error))
     }
@@ -623,6 +626,23 @@ async function showGlassesFrame(frame: GlassesFrame) {
   } catch (error) {
     console.warn('Failed to update glasses:', error)
   }
+}
+
+function reportSocialFailure(stage: 'start' | 'finish', error: unknown) {
+  const failure = error instanceof Error ? error : new Error(String(error))
+  void forwardEvent({
+    id: ++eventId,
+    receivedAt: new Date().toISOString(),
+    envelope: 'unknown',
+    gesture: socialFailureGesture(stage, failure),
+    source: { label: 'unknown', kind: 'unknown' },
+    eventType: { label: 'client_error' },
+    raw: {
+      stage,
+      name: failure.name,
+      message: failure.message,
+    },
+  }, null)
 }
 
 function normalizeEvent(event: EvenHubEvent): NormalizedEvent | null {

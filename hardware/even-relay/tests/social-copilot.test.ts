@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   hasUsableSocialInsight,
+  socialFailureGesture,
   SocialCopilotController,
   routeSocialGesture,
   shouldAppendSocialPcm,
@@ -38,6 +39,48 @@ describe('SocialCopilotController', () => {
     for (const [, init] of fetcher.mock.calls) {
       expect(new Headers(init.headers).get('Authorization')).toBe('Bearer relay-test-token')
     }
+  })
+
+  it('calls a native-style fetcher with the browser global as its receiver', async () => {
+    const fetcher = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation')
+      return Promise.resolve(new Response(JSON.stringify({
+        ok: true,
+        id: 'session-1',
+      }), { status: 200 }))
+    })
+    const controller = new SocialCopilotController({
+      eventEndpoint: 'https://relay.example/even',
+      fetcher,
+    })
+
+    await controller.start()
+
+    expect(fetcher).toHaveBeenCalledOnce()
+  })
+
+  it('starts without relying on the Headers constructor', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true,
+      id: 'session-1',
+    }), { status: 200 }))
+    const controller = new SocialCopilotController({
+      eventEndpoint: 'https://relay.example/even',
+      accessToken: 'relay-test-token',
+      fetcher,
+    })
+    vi.stubGlobal('Headers', undefined)
+
+    try {
+      await controller.start()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+
+    expect(fetcher.mock.calls[0][1].headers).toMatchObject({
+      Authorization: 'Bearer relay-test-token',
+      'Content-Type': 'application/json',
+    })
   })
 
   it('batches short G2 PCM frames before sending them through the relay', async () => {
@@ -149,6 +192,13 @@ describe('SocialCopilotController', () => {
       suggestion: ['继续聊旅行'],
       expiresAt: Date.now() + 1_000,
     })).toBe(true)
+  })
+
+  it('encodes a bounded client failure stage for relay diagnostics', () => {
+    expect(socialFailureGesture('start', new TypeError('Illegal invocation')))
+      .toBe('social.start_failed.TypeError_Illegal_invocation')
+    expect(socialFailureGesture('finish', new Error('x'.repeat(200))).length)
+      .toBeLessThanOrEqual(96)
   })
 
   it('times out a never-resolving start and returns to idle', async () => {

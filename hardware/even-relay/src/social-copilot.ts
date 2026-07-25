@@ -25,6 +25,14 @@ export function routeSocialGesture(gesture: string): 'toggle' | 'view' | 'forwar
   return 'forward'
 }
 
+export function socialFailureGesture(stage: 'start' | 'finish', error: unknown) {
+  const failure = toError(error)
+  const normalized = `${failure.name}_${failure.message}`
+    .replace(/[^A-Za-z0-9_.-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  return `social.${stage}_failed.${normalized || 'unknown'}`.slice(0, 96)
+}
+
 export class SocialCopilotController {
   private readonly fetcher: Fetcher
   private readonly timeoutMs: number
@@ -237,9 +245,15 @@ export class SocialCopilotController {
     this.inFlight.add(controller)
     let timeout: ReturnType<typeof setTimeout> | null = null
     try {
-      const headers = new Headers(init.headers)
-      headers.set('Authorization', `Bearer ${this.accessToken}`)
-      const pending = this.fetcher(input, { ...init, headers, signal: controller.signal })
+      const headers = {
+        ...(init.headers as Record<string, string> | undefined),
+        Authorization: `Bearer ${this.accessToken}`,
+      }
+      const pending = this.fetcher.call(globalThis, input, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      })
       const timeoutError = new Promise<never>((_resolve, reject) => {
         timeout = setTimeout(() => {
           controller.abort()
