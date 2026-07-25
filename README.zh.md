@@ -2,7 +2,7 @@
 
 **现实世界唤醒 Agent，Agent 回到现实世界帮你。**
 
-[English](README.md) · 提交分支：`final`
+[English](README.md)
 
 SNAKE1 是一个平台原型，目标是让 Personal Agent 能被现实触发，并通过被授权
 的现实工具采取行动。一次戒指手势、一段短时声音或一个明确动作成为 **Input**；Agent
@@ -72,20 +72,6 @@ P0 不依赖耳机或机械狗。P1 不做全天持续监听。
 > 目前没有 Even 事件能够触发 Go2 动作，机器狗也没有作为自主 SNAKE1 Agent
 > 运行；现场是人类遥操。`hardware/go2/` 记录的是尝试中的下一步，不是已经
 > 跑通的 Demo。
-
-## 选择的四个赛道
-
-我们只报能强化同一条现实闭环的四个赛道，而不是临时拼出四个无关项目：
-
-| 赛道 | 在 SNAKE1 中的角色 | 已实现内容 |
-|---|---|---|
-| **Photon** | Agent 原生的现实消息 Output | Spectrum iMessage Agent、主动私聊、owner 消息指令、取消与延后 |
-| **弦指科技 · Zilo** | 隐蔽的现实 Input | BLE 戒指连接、六轴数据处理、HMM 手势模型、置信度门槛、后端桥接 |
-| **Dimensional** | 计划中的具身 Output | 当前现场能力是人工遥操 Go2；StepFun/DimOS 代码仍是实验性脚手架，尚未验证 Even → Agent → 机器狗闭环 |
-| **未来智能 · Future Intelligence** | 私密、Voice-first 的 Agent 入口 | 已实现短时语音协议与 Rescue/Coach 对话；viaim 专用设备传输层仍需绑定 |
-
-Dimensional 与未来智能两项明确写为“未完成”或“接口就绪”，而不是假装完成
-仓库里不存在的赞助方设备集成。这能让评委看清平台扩展性，也保留技术可信度。
 
 ## 今天真实能跑什么
 
@@ -180,7 +166,7 @@ uvicorn app.main:app --app-dir backend --reload
 
 ## 验证
 
-当前 `final` 结果：**120 个自动化测试通过**，两个 Photon Spectrum TypeScript
+当前仓库结果：**120 个自动化测试通过**，两个 Photon Spectrum TypeScript
 Agent 均通过类型检查，Even 硬件客户端生产构建完成。这些测试验证的是软件
 协议，**不能证明 Even 已经触发 DimOS/Go2，也不能证明机器狗已自主行动。**
 

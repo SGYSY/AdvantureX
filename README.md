@@ -2,7 +2,7 @@
 
 **Wake your Personal Agent from the real world. Let it return to the real world and help.**
 
-[中文](README.zh.md) · Submission branch: `final`
+[中文](README.zh.md)
 
 SNAKE1 is a platform prototype designed to let a Personal Agent be triggered by
 physical-world signals and act through authorized real-world tools. A ring gesture, a short
@@ -79,22 +79,6 @@ listening.
 > robot is not operating as an autonomous SNAKE1 Agent. Today it is
 > remote-controlled by a human. Files under `hardware/go2/` describe the
 > attempted next step, not a completed demo.
-
-## Selected sponsor tracks
-
-We selected the four tracks that strengthen the same loop instead of inventing
-four unrelated demos:
-
-| Track | Role in SNAKE1 | What is implemented |
-|---|---|---|
-| **Photon** | Agent-native real-world messaging output | Spectrum iMessage Agent, outbound DM bridge, inbound owner commands, cancellation and delay |
-| **弦指科技 · Zilo** | Covert physical input | BLE ring connection, six-axis stream processing, HMM gesture models, confidence gate, backend bridge |
-| **Dimensional** | Planned embodied output | Current on-site capability is manual Go2 teleoperation. StepFun/DimOS code is experimental and has not been validated as an Even → Agent → robot chain |
-| **未来智能 · Future Intelligence** | Private, voice-first Agent interface | Device-agnostic short-turn contract and Rescue/Coach dialogue; viaim-specific device transport remains the adapter to bind |
-
-The Dimensional and Future Intelligence rows are intentionally labeled as
-incomplete or adapter-ready. The repository does not claim a sponsor-device
-integration that is not present.
 
 ## What works today
 
@@ -198,7 +182,7 @@ Core API surface:
 
 ## Verification
 
-Current `final` result: **120 automated tests passing**, both Photon Spectrum
+Current repository result: **120 automated tests passing**, both Photon Spectrum
 TypeScript agents type-checking, and the Even hardware client production build
 completing. These tests validate software contracts; they do **not** prove that
 Even glasses can trigger DimOS/Go2 or that the robot acts autonomously.
