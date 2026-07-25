@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Go2 控制台</title>
+  <style>
+    :root {
+      --bg: #0f1216; --panel: #191e26; --panel2: #222933;
+      --fg: #e8edf2; --muted: #93a1b0; --line: #2c343f;
+      --accent: #3b82f6; --accent2: #2563eb;
+      --ok: #22c55e; --warn: #f59e0b; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background: var(--bg); color: var(--fg);
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      padding: 12px; padding-bottom: 40px;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    header h1 { font-size: 19px; margin: 0; letter-spacing: 1px; }
+    .status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); transition: background .2s; }
+    .dot.on { background: var(--ok); }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 900px; margin: 0 auto; }
+    @media (min-width: 720px) { .grid { grid-template-columns: 320px 1fr; align-items: start; } }
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 14px; padding: 14px;
+    }
+    .card h2 { font-size: 14px; margin: 0 0 10px; color: var(--muted); font-weight: 600; }
+
+    /* D-pad */
+    .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .pad button, .action, .estop {
+      border: 1px solid var(--line); background: var(--panel2); color: var(--fg);
+      border-radius: 12px; font-size: 15px; cursor: pointer; user-select: none;
+      transition: transform .05s, background .15s, border-color .15s;
+    }
+    .pad button {
+      height: 60px; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 2px; font-weight: 600;
+    }
+    .pad button small { font-size: 11px; color: var(--muted); font-weight: 400; }
+    .pad button:active, .pad button.hold { background: var(--accent2); border-color: var(--accent); transform: scale(.96); }
+    .pad .spacer { visibility: hidden; }
+
+    .sliders { margin-top: 12px; }
+    .slider-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
+    .slider-row label { width: 78px; color: var(--muted); }
+    .slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
+    .slider-row .val { width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    .estop { width: 100%; height: 52px; margin-top: 12px; background: var(--danger);
+      border-color: #b91c1c; font-weight: 700; font-size: 16px; letter-spacing: 2px; }
+    .estop:active { transform: scale(.98); }
+
+    .hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+    .hint kbd {
+      background: var(--panel2); border: 1px solid var(--line); border-bottom-width: 2px;
+      border-radius: 5px; padding: 1px 6px; font-size: 11px; margin: 0 1px;
+    }
+
+    /* Actions */
+    .cat { margin-bottom: 14px; }
+    .cat h3 { font-size: 13px; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+    .cat h3 .danger-tag { color: var(--danger); }
+    .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+    .action { height: 46px; font-size: 14px; }
+    .action:active { transform: scale(.95); background: var(--accent2); border-color: var(--accent); }
+    .action.danger { border-color: #7f1d1d; }
+    .action.danger:active { background: var(--danger); border-color: var(--danger); }
+
+    #log {
+      max-width: 900px; margin: 12px auto 0; background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 10px 12px; font-size: 12px; color: var(--muted);
+      height: 90px; overflow-y: auto; font-family: ui-monospace, Menlo, monospace;
+    }
+    #log .ok { color: var(--ok); }
+    #log .err { color: var(--danger); }
+    #toast {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: var(--panel2); border: 1px solid var(--line); color: var(--fg);
+      padding: 10px 18px; border-radius: 24px; font-size: 14px; opacity: 0;
+      transition: opacity .2s; pointer-events: none; z-index: 20;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🐕 Go2 控制台</h1>
+    <div class="status"><span id="dot" class="dot"></span><span id="statusText">未连接</span></div>
+  </header>
+
+  <div class="grid">
+    <!-- 遥控 -->
+    <section class="card">
+      <h2>移动遥控</h2>
+      <div class="pad">
+        <button class="spacer"></button>
+        <button data-dir="forward"><span>前进</span><small>W / ↑</small></button>
+        <button class="spacer"></button>
+        <button data-dir="turn_left"><span>左转</span><small>A / ←</small></button>
+        <button data-dir="stop"><span>停</span><small>空格</small></button>
+        <button data-dir="turn_right"><span>右转</span><small>D / →</small></button>
+        <button data-dir="strafe_left"><span>左移</span><small>Q</small></button>
+        <button data-dir="backward"><span>后退</span><small>S / ↓</small></button>
+        <button data-dir="strafe_right"><span>右移</span><small>E</small></button>
+      </div>
+
+      <div class="sliders">
+        <div class="slider-row">
+          <label>线速度</label>
+          <input id="linear" type="range" min="0.1" max="1.2" step="0.05" value="0.4" />
+          <span class="val" id="linearVal">0.40 m/s</span>
+        </div>
+        <div class="slider-row">
+          <label>角速度</label>
+          <input id="angular" type="range" min="0.2" max="2.5" step="0.05" value="0.8" />
+          <span class="val" id="angularVal">0.80 rad/s</span>
+        </div>
+      </div>
+
+      <button class="estop" id="estop">紧 急 停 止</button>
+
+      <div class="hint">
+        键盘：<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动 /
+        <kbd>Q</kbd><kbd>E</kbd> 平移 / <kbd>空格</kbd> 停 /
+        按住 <kbd>Shift</kbd> 加速。<br />
+        触屏：按住方向按钮移动，松手即停（含掉线保护）。
+      </div>
+    </section>
+
+    <!-- 动作 -->
+    <section class="card">
+      <h2>动作（点击触发）</h2>
+      <div id="actionArea"><div class="hint">加载动作中…</div></div>
+    </section>
+  </div>
+
+  <div id="log"></div>
+  <div id="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const dot = $("dot"), statusText = $("statusText");
+    const linearEl = $("linear"), angularEl = $("angular");
+    const BOOST = 1.8;
+
+    // ---- logging / toast ----
+    function log(msg, kind) {
+      const el = $("log");
+      const line = document.createElement("div");
+      if (kind) line.className = kind;
+      const t = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+      line.textContent = `[${t}] ${msg}`;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+    let toastTimer;
+    function toast(msg) {
+      const el = $("toast");
+      el.textContent = msg; el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 1400);
+    }
+
+    // ---- sliders ----
+    function fmt() {
+      $("linearVal").textContent = (+linearEl.value).toFixed(2) + " m/s";
+      $("angularVal").textContent = (+angularEl.value).toFixed(2) + " rad/s";
+    }
+    linearEl.oninput = fmt; angularEl.oninput = fmt; fmt();
+
+    // ---- teleop state ----
+    const active = new Set();      // active directions
+    let boost = false;
+    let ws = null, wsReady = false;
+
+    function connect() {
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      ws = new WebSocket(`${proto}://${location.host}/ws/teleop`);
+      ws.onopen = () => { wsReady = true; dot.classList.add("on"); statusText.textContent = "已连接"; log("WebSocket 已连接", "ok"); };
+      ws.onclose = () => { wsReady = false; dot.classList.remove("on"); statusText.textContent = "重连中…"; setTimeout(connect, 1000); };
+      ws.onerror = () => { statusText.textContent = "连接错误"; };
+    }
+    connect();
+
+    function computeTwist() {
+      const lin = +linearEl.value, ang = +angularEl.value;
+      const m = boost ? BOOST : 1.0;
+      let vx = 0, vy = 0, wz = 0;
+      if (active.has("forward")) vx += lin;
+      if (active.has("backward")) vx -= lin;
+      if (active.has("strafe_left")) vy += lin;
+      if (active.has("strafe_right")) vy -= lin;
+      if (active.has("turn_left")) wz += ang;
+      if (active.has("turn_right")) wz -= ang;
+      return { vx: vx * m, vy: vy * m, wz: wz * m };
+    }
+
+    // Continuous sender: 20Hz. Server has its own deadman watchdog.
+    setInterval(() => {
+      if (!wsReady) return;
+      const t = computeTwist();
+      try { ws.send(JSON.stringify(t)); } catch (e) {}
+    }, 50);
+
+    function stopAll() {
+      active.clear();
+      document.querySelectorAll(".pad button.hold").forEach(b => b.classList.remove("hold"));
+      if (wsReady) { try { ws.send(JSON.stringify({ vx: 0, vy: 0, wz: 0 })); } catch (e) {} }
+      fetch("/api/stop", { method: "POST" }).catch(() => {});
+    }
+
+    // ---- on-screen d-pad (pointer = mouse + touch) ----
+    document.querySelectorAll(".pad button[data-dir]").forEach(btn => {
+      const dir = btn.dataset.dir;
+      const press = (e) => {
+        e.preventDefault();
+        if (dir === "stop") { stopAll(); return; }
+        active.add(dir); btn.classList.add("hold");
+      };
+      const release = () => {
+        if (dir === "stop") return;
+        active.delete(dir); btn.classList.remove("hold");
+      };
+      btn.addEventListener("pointerdown", press);
+      btn.addEventListener("pointerup", release);
+      btn.addEventListener("pointerleave", release);
+      btn.addEventListener("pointercancel", release);
+    });
+
+    $("estop").addEventListener("click", () => { stopAll(); toast("已停止"); log("紧急停止", "err"); });
+
+    // ---- keyboard ----
+    const KEYMAP = {
+      "w": "forward", "arrowup": "forward",
+      "s": "backward", "arrowdown": "backward",
+      "a": "turn_left", "arrowleft": "turn_left",
+      "d": "turn_right", "arrowright": "turn_right",
+      "q": "strafe_left", "e": "strafe_right",
+    };
+    function padBtn(dir) { return document.querySelector(`.pad button[data-dir="${dir}"]`); }
+    window.addEventListener("keydown", (e) => {
+      if (e.repeat) return;
+      const k = e.key.toLowerCase();
+      if (k === "shift") { boost = true; return; }
+      if (k === " " || k === "spacebar") { e.preventDefault(); stopAll(); toast("已停止"); return; }
+      const dir = KEYMAP[k];
+      if (dir) { e.preventDefault(); active.add(dir); const b = padBtn(dir); if (b) b.classList.add("hold"); }
+    });
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "shift") { boost = false; return; }
+      const dir = KEYMAP[k];
+      if (dir) { active.delete(dir); const b = padBtn(dir); if (b) b.classList.remove("hold"); }
+    });
+    // Safety: release everything if the tab loses focus.
+    window.addEventListener("blur", stopAll);
+
+    // ---- actions ----
+    async function triggerAction(btn, name, label, danger) {
+      if (danger && !confirm(`「${label}」是高风险动作，需空旷平地且电量充足。\n确定执行？`)) return;
+      if (btn.disabled) return;
+      log(`发送动作：${label} (${name})…`);
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = "…";
+      // Abort on the client side too, slightly longer than the server RPC timeout.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      try {
+        const r = await fetch(`/api/action/${encodeURIComponent(name)}`, { method: "POST", signal: ctrl.signal });
+        const data = await r.json();
+        if (data.ok) { toast(`✓ ${label}`); log(`✓ ${label} 执行成功`, "ok"); }
+        else { toast(`✗ ${label}`); log(`✗ ${label} 失败：${data.error || "未知错误"}`, "err"); }
+      } catch (e) {
+        const msg = (e && e.name === "AbortError") ? "请求超时（DimOS 未连接？）" : String(e);
+        toast(`✗ ${label}`); log(`✗ ${label} 请求失败：${msg}`, "err");
+      } finally {
+        clearTimeout(timer);
+        btn.disabled = false; btn.textContent = original;
+      }
+    }
+
+    async function loadActions() {
+      try {
+        const r = await fetch("/api/actions");
+        const list = await r.json();
+        const area = $("actionArea");
+        area.innerHTML = "";
+        const groups = {};
+        for (const a of list) {
+          (groups[a.category] = groups[a.category] || { label: a.category_label, items: [] }).items.push(a);
+        }
+        for (const cat of Object.keys(groups)) {
+          const g = groups[cat];
+          const box = document.createElement("div"); box.className = "cat";
+          const h = document.createElement("h3");
+          const hasDanger = g.items.some(x => x.danger);
+          h.innerHTML = g.label + (hasDanger ? ' <span class="danger-tag">⚠</span>' : "");
+          box.appendChild(h);
+          const grid = document.createElement("div"); grid.className = "actions";
+          for (const a of g.items) {
+            const b = document.createElement("button");
+            b.className = "action" + (a.danger ? " danger" : "");
+            b.textContent = a.label;
+            b.title = `${a.name} (${a.id}) — ${a.desc}`;
+            b.onclick = () => triggerAction(b, a.name, a.label, a.danger);
+            grid.appendChild(b);
+          }
+          box.appendChild(grid);
+          area.appendChild(box);
+        }
+        log(`已加载 ${list.length} 个动作`, "ok");
+      } catch (e) {
+        $("actionArea").innerHTML = '<div class="hint">动作加载失败，请检查服务。</div>';
+        log("动作加载失败：" + e, "err");
+      }
+    }
+    loadActions();
+  </script>
+</body>
+</html>
