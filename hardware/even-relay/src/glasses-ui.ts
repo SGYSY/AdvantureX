@@ -52,7 +52,7 @@ export function createCheckedGlassesWriter(options: {
 export function formatGlassesFrame(frame: GlassesFrame) {
   if (frame.kind === 'blank') return { content: ' ', durationMs: 0 }
   if (frame.kind === 'listening') return { content: '● 15s', durationMs: 0 }
-  if (frame.kind === 'thinking') return { content: '○', durationMs: 2000 }
+  if (frame.kind === 'thinking') return { content: '○', durationMs: 0 }
   if (frame.kind === 'ready') return { content: '▲', durationMs: 2000 }
   if (frame.kind === 'rescue') return { content: '■ 已收到', durationMs: 6000 }
   if (frame.kind === 'error') return { content: '□', durationMs: 2000 }
@@ -65,7 +65,7 @@ export function formatGlassesFrame(frame: GlassesFrame) {
     .map(line => Array.from(line).slice(0, 18).join(''))
   return {
     content: lines.length ? `♥ ${lines.join('\n')}` : '▼ 上滑',
-    durationMs: lines.length ? 6000 : 2000,
+    durationMs: lines.length ? 10_000 : 2000,
   }
 }
 

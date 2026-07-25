@@ -14,6 +14,10 @@ describe('formatGlassesFrame', () => {
       content: '● 15s',
       durationMs: 0,
     })
+    expect(formatGlassesFrame({ kind: 'thinking' })).toEqual({
+      content: '○',
+      durationMs: 0,
+    })
     expect(formatGlassesFrame({ kind: 'ready' })).toEqual({
       content: '▲',
       durationMs: 2000,
@@ -24,13 +28,13 @@ describe('formatGlassesFrame', () => {
     })
   })
 
-  it('renders advice as at most two lines for six seconds', () => {
+  it('renders advice as at most two lines for ten seconds', () => {
     expect(formatGlassesFrame({
       kind: 'advice',
       lines: ['她提到了旅行', '问问最喜欢哪里'],
     })).toEqual({
       content: '♥ 她提到了旅行\n问问最喜欢哪里',
-      durationMs: 6000,
+      durationMs: 10_000,
     })
   })
 
@@ -40,14 +44,14 @@ describe('formatGlassesFrame', () => {
       lines: ['  第一行\r\n\n第二行  ', '1234567890123456789', '不应显示'],
     })).toEqual({
       content: '♥ 第一行\n第二行',
-      durationMs: 6000,
+      durationMs: 10_000,
     })
     expect(formatGlassesFrame({
       kind: 'advice',
       lines: ['😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀'],
     })).toEqual({
       content: '♥ 😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀',
-      durationMs: 6000,
+      durationMs: 10_000,
     })
   })
 
