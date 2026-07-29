@@ -21,15 +21,16 @@
         <p class="call-kind">私人助理来电</p>
         <p id="status" class="status">准备开始一个模拟双击救场</p>
         <div id="dots" class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-        <p id="caption" class="caption">点击下方按钮后，先发送 iMessage，再显示来电。</p>
+        <p id="caption" class="caption">戒指双击后会发送 iMessage，并在 10 秒后显示来电。</p>
       </div>
       <section class="setup" id="setup">
         <p class="fixed-message">iMessage 将发送给你已连接的号码：<br><strong>“有一群母猪排队掉进水里”</strong></p>
         <label>播放录音（可选 MP3）
           <input id="recording" type="file" accept="audio/mpeg,audio/mp3,audio/*">
         </label>
-        <button id="trigger" class="trigger">模拟眼镜 / 戒指双击</button>
-        <p class="tiny">先经 Spectrum 发出 iMessage；5 秒后进入来电。网页来电不消耗电话线路。</p>
+        <button id="arm" class="trigger">预备戒指来电（先点一次）</button>
+        <button id="trigger" class="trigger">网页模拟戒指双击</button>
+        <p class="tiny">先点“预备”授权铃声，再在戒指上双击。Spectrum 会先发 iMessage，10 秒后进入网页来电。网页来电不消耗电话线路。</p>
       </section>
       <section class="controls" aria-label="通话控制">
         <button id="sound" class="control neutral hidden" aria-label="开启铃声"><span>♬</span><small>开启铃声</small></button>

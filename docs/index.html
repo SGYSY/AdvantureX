@@ -15,13 +15,14 @@
       <h1>Wingman</h1><p>私人助理来电</p>
       <h2 id="status">准备开始一个模拟双击救场</h2>
       <div class="dots">● ● ●</div>
-      <p id="caption">点击下方按钮后，先发送 iMessage，再显示来电。</p>
+      <p id="caption">戒指双击后会发送 iMessage，并在 10 秒后显示来电。</p>
     </section>
     <section id="setup" class="setup">
       <p class="fixed">iMessage 将发送给你已连接的号码：<br><strong>“有一群母猪排队掉进水里”</strong></p>
       <label>播放录音（可选 MP3）<input id="recording" type="file" accept="audio/*"></label>
-      <button id="trigger" class="trigger">模拟眼镜 / 戒指双击</button>
-      <small id="modeNote">静态预览：不会发送 iMessage。配置私密 API 后才会连接 Spectrum。</small>
+      <button id="arm" class="trigger">预备戒指来电（先点一次）</button>
+      <button id="trigger" class="trigger">网页模拟戒指双击</button>
+      <small id="modeNote">先点“预备”授权铃声，再在戒指上双击。需要可连接的私密 API 才会接收真实来电状态。</small>
     </section>
     <nav>
       <button id="sound" class="hidden">♬<small>开启铃声</small></button>
