@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 接入暗号 · Ring 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:11px;padding:11px 16px 12px;flex:0 0 auto;}
+  .back{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .back:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .htitle{font-family:var(--disp);font-size:18px;letter-spacing:-.5px;color:var(--ink);}
+  .head-sp{flex:1;}
+  .model{font-family:var(--mono);font-weight:700;font-size:9px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);background:var(--card);padding:4px 7px;white-space:nowrap;}
+
+  /* step rail */
+  .rail{display:flex;gap:4px;padding:12px 16px 4px;flex:0 0 auto;}
+  .rst{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;opacity:.4;transition:opacity .2s;}
+  .rst.on,.rst.done{opacity:1;}
+  .rst .dot{width:26px;height:26px;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;color:var(--ink);background:var(--card);}
+  .rst.on .dot{background:var(--sun);}
+  .rst.done .dot{background:var(--live);color:#fff;border-color:var(--live);box-shadow:2px 2px 0 var(--ink);}
+  .rst small{font-family:var(--mono);font-weight:700;font-size:7.5px;letter-spacing:.2px;color:var(--ink);text-align:center;line-height:1.2;}
+
+  .body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px 18px 8px;}
+  .body::-webkit-scrollbar{display:none;}
+
+  .pane{display:none;}
+  .pane.on{display:block;animation:rise .25s steps(3,jump-none);}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .ptitle{font-family:var(--disp);font-size:24px;letter-spacing:-.7px;color:var(--ink);line-height:1.05;}
+  .psub{font-family:var(--ui);font-weight:600;font-size:12.5px;color:#4a463c;margin-top:8px;line-height:1.5;}
+
+  .card{background:var(--card);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);margin-top:14px;}
+  .card.pad{padding:14px;}
+
+  /* connect visual */
+  .scan{padding:20px 14px;text-align:center;}
+  .radar{width:110px;height:110px;margin:0 auto 6px;border:3px solid var(--ink);box-shadow:4px 4px 0 var(--pink);background:var(--cream);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  .radar .ring{position:absolute;border:2.5px solid var(--pink);border-radius:50%;animation:pulse 1.6s steps(4,jump-none) infinite;opacity:0;}
+  .radar .ring.r1{width:30px;height:30px;} .radar .ring.r2{width:30px;height:30px;animation-delay:.5s;} .radar .ring.r3{width:30px;height:30px;animation-delay:1s;}
+  @keyframes pulse{0%{width:20px;height:20px;opacity:1}100%{width:100px;height:100px;opacity:0}}
+  .radar img{width:44px;image-rendering:pixelated;position:relative;z-index:2;}
+  .scan .stt{font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);margin-top:8px;}
+  .found{margin-top:12px;}
+  .frow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);background:var(--card);cursor:pointer;margin-bottom:9px;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);opacity:0;}
+  .frow.show{opacity:1;animation:rise .3s steps(3,jump-none);}
+  .frow:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .frow .fi{width:34px;height:34px;flex:0 0 auto;background:var(--pink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .frow .ft{flex:1;min-width:0;}
+  .frow .ft b{font-family:var(--ui);font-weight:800;font-size:13px;color:var(--ink);display:block;}
+  .frow .ft small{font-family:var(--mono);font-weight:700;font-size:9px;color:var(--mut);}
+  .frow .paired{font-family:var(--mono);font-weight:700;font-size:8px;color:#256b3a;border:1.5px solid #256b3a;padding:2px 5px;white-space:nowrap;}
+  .retry{font-family:var(--mono);font-weight:700;font-size:10px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);background:var(--cream);padding:8px 12px;display:inline-block;cursor:pointer;margin-top:4px;}
+
+  /* capability read chips */
+  .caps{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .cbtn{font-family:var(--mono);font-weight:700;font-size:10px;color:var(--ink);border:2px solid var(--ink);padding:6px 10px;background:var(--cream);opacity:0;}
+  .cbtn.show{opacity:1;animation:rise .3s steps(3,jump-none);}
+  .cbtn.ok{background:var(--live);color:#fff;} .cbtn.dim{opacity:.42;text-decoration:line-through;}
+
+  /* config fields */
+  .field{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:2px dashed #eee2c2;}
+  .field:last-child{border-bottom:0;}
+  .field .ft{flex:1;min-width:0;}
+  .field .ft b{font-family:var(--ui);font-weight:800;font-size:13px;color:var(--ink);display:block;}
+  .field .ft small{font-family:var(--ui);font-weight:500;font-size:10.5px;color:#5a5347;display:block;margin-top:2px;}
+  .stepper{display:flex;align-items:center;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);background:var(--card);}
+  .stepper button{width:30px;height:30px;border:0;background:var(--card);font-family:var(--disp);font-size:15px;color:var(--ink);cursor:pointer;}
+  .stepper button:active{background:var(--sun);}
+  .stepper .v{min-width:52px;text-align:center;font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);border-left:2px solid var(--ink);border-right:2px solid var(--ink);line-height:30px;}
+  .tgl{width:44px;height:26px;flex:0 0 auto;border:2.5px solid var(--ink);background:var(--cream);position:relative;cursor:pointer;box-shadow:2px 2px 0 var(--ink);}
+  .tgl .kn{position:absolute;top:1px;left:1px;width:18px;height:18px;background:var(--ink);transition:left .12s steps(2,jump-none);}
+  .tgl.on{background:var(--live);} .tgl.on .kn{left:21px;background:#fff;}
+
+  /* test */
+  .testbox{padding:16px 14px;text-align:center;}
+  .testbox .avwrap img{width:66px;image-rendering:pixelated;}
+  .testbox .tt{font-family:var(--ui);font-weight:800;font-size:14px;color:var(--ink);margin-top:6px;}
+  .testbox .ts{font-family:var(--ui);font-weight:500;font-size:11px;color:#5a5347;margin-top:5px;line-height:1.5;}
+  .testbtn{margin-top:12px;cursor:pointer;font-family:var(--ui);font-weight:800;font-size:14px;border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);background:var(--sun);}
+  .testbtn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .testlog{margin-top:11px;border:2.5px dashed var(--ink);background:var(--cream);padding:10px;min-height:40px;font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);text-align:left;line-height:1.7;}
+  .testlog .ev{display:none;} .testlog .ev.show{display:block;animation:rise .2s steps(2,jump-none);}
+  .testlog .ev b{color:var(--pink2);}
+
+  /* name & bind */
+  .nameinput{width:100%;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);outline:0;background:var(--card);font-family:var(--ui);font-weight:700;font-size:15px;color:var(--ink);padding:11px 12px;}
+  .bindsel{margin-top:12px;}
+  .bopt{display:flex;align-items:center;gap:10px;padding:11px 12px;border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);background:var(--card);cursor:pointer;margin-bottom:9px;}
+  .bopt.sel{background:var(--pink);}
+  .bopt .bk{width:22px;height:22px;flex:0 0 auto;border:2px solid var(--ink);background:var(--cream);display:flex;align-items:center;justify-content:center;}
+  .bopt.sel .bk{background:var(--card);}
+  .bopt b{font-family:var(--ui);font-weight:800;font-size:13px;color:var(--ink);flex:1;}
+  .bopt small{font-family:var(--mono);font-weight:700;font-size:9px;color:var(--mut);}
+
+  .doneWrap{text-align:center;padding:14px;}
+  .doneWrap .big{width:70px;height:70px;margin:0 auto;background:var(--live);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:#fff;}
+  .doneWrap h3{font-family:var(--disp);font-size:22px;color:var(--ink);margin-top:12px;letter-spacing:-.5px;}
+  .doneWrap p{font-family:var(--ui);font-weight:600;font-size:12px;color:#4a463c;margin-top:8px;line-height:1.5;}
+  .statechain{display:flex;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap;}
+  .sc{font-family:var(--mono);font-weight:700;font-size:8.5px;color:#256b3a;border:1.5px solid #256b3a;padding:3px 6px;display:flex;align-items:center;gap:4px;}
+
+  /* footer nav */
+  .foot{flex:0 0 auto;border-top:3px solid var(--ink);background:var(--card);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;}
+  .b{cursor:pointer;font-family:var(--ui);font-weight:800;font-size:14px;border:3px solid var(--ink);padding:13px;display:flex;align-items:center;justify-content:center;gap:7px;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .b.ghost{background:var(--card);box-shadow:4px 4px 0 var(--ink);}
+  .b.pink{background:var(--pink);box-shadow:4px 4px 0 var(--ink);flex:1;}
+  .b.pink.dis{opacity:.4;pointer-events:none;}
+  .b:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .b .arw{font-family:var(--disp);font-size:15px;}
+
+  .toast{position:absolute;left:50%;bottom:96px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:40;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:320px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="head">
+      <a class="back" href="snake-signal-config.html" aria-label="返回">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
+      <span class="htitle">接入暗号</span>
+      <span class="head-sp"></span>
+      <span class="model">Ring 01</span>
+    </div>
+
+    <!-- step rail -->
+    <div class="rail" id="rail">
+      <div class="rst on" data-s="0"><div class="dot">1</div><small>连接</small></div>
+      <div class="rst" data-s="1"><div class="dot">2</div><small>读能力</small></div>
+      <div class="rst" data-s="2"><div class="dot">3</div><small>配置</small></div>
+      <div class="rst" data-s="3"><div class="dot">4</div><small>测试</small></div>
+      <div class="rst" data-s="4"><div class="dot">5</div><small>命名绑定</small></div>
+    </div>
+
+    <div class="body">
+
+      <!-- STEP 1 connect -->
+      <div class="pane on" data-p="0">
+        <div class="ptitle">连上你的 Ring 01</div>
+        <div class="psub">通过蓝牙搜索附近的戒指。请让戒指靠近手机、保持唤醒。</div>
+        <div class="card">
+          <div class="scan">
+            <div class="radar"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><img src="snake/snake_cut.png" alt="" /></div>
+            <div class="stt" id="scanStt">正在扫描附近设备…</div>
+            <div class="found" id="found">
+              <div class="frow" id="dev1">
+                <div class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><circle cx="12" cy="14" r="6"/><path d="M9 7l3-4 3 4"/></svg></div>
+                <div class="ft"><b>Ring 01 · 3F9A</b><small>信号强 · 电量 82%</small></div>
+                <span class="paired">系统已配对</span>
+              </div>
+            </div>
+            <span class="retry" id="retry" style="display:none">超过 10 秒没找到？重新扫描 / 检查系统蓝牙</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 capability read -->
+      <div class="pane" data-p="1">
+        <div class="ptitle">这个戒指能收到什么</div>
+        <div class="psub">正在从设备读取它真实支持的动作。只有能稳定收到的，才允许配置成暗号。</div>
+        <div class="card pad">
+          <div class="caps" id="caps">
+            <span class="cbtn" data-c="单击">单击</span>
+            <span class="cbtn" data-c="双击">双击</span>
+            <span class="cbtn" data-c="长按">长按</span>
+            <span class="cbtn dim" data-c="三击">三击 · 不稳定</span>
+          </div>
+          <div class="psub" id="capHint" style="margin-top:12px;font-family:var(--mono);font-size:10px;">读取中…</div>
+        </div>
+      </div>
+
+      <!-- STEP 3 config -->
+      <div class="pane" data-p="2">
+        <div class="ptitle">配一下双击</div>
+        <div class="psub">已给安全默认值，不确定就先用默认，够稳。</div>
+        <div class="card">
+          <div class="field"><div class="ft"><b>触控动作</b><small>用哪个动作当暗号</small></div><span class="model" style="box-shadow:none">双击</span></div>
+          <div class="field"><div class="ft"><b>双击时间窗</b><small>两次点击的最大间隔</small></div><div class="stepper" data-u="ms" data-step="50" data-min="200" data-max="600"><button data-d="-1">−</button><span class="v">400ms</span><button data-d="1">＋</button></div></div>
+          <div class="field"><div class="ft"><b>冷却</b><small>触发后多久内不重复</small></div><div class="stepper" data-u="s" data-step="1" data-min="3" data-max="20"><button data-d="-1">−</button><span class="v">8s</span><button data-d="1">＋</button></div></div>
+          <div class="field"><div class="ft"><b>防误触</b><small>过滤走路、洗手误碰</small></div><div class="tgl on" data-k="防误触"><span class="kn"></span></div></div>
+          <div class="field"><div class="ft"><b>震动确认</b><small>收到时戒指轻震</small></div><div class="tgl on" data-k="震动确认"><span class="kn"></span></div></div>
+        </div>
+      </div>
+
+      <!-- STEP 4 test -->
+      <div class="pane" data-p="3">
+        <div class="ptitle">真实测一下</div>
+        <div class="psub">测试模式只接收事件，不会运行任何预案。现在双击你的戒指试试。</div>
+        <div class="card">
+          <div class="testbox">
+            <div class="avwrap"><img src="snake/snake_cut.png" alt="" /></div>
+            <div class="tt">等你双击 Ring 01…</div>
+            <div class="ts">只收事件、不跑预案；测试超时不会创建暗号。</div>
+            <div class="testbtn" id="testBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6M5.6 7.6l4.2 4.2"/><circle cx="12" cy="16" r="5"/></svg> 模拟一次双击</div>
+            <div class="testlog" id="testLog">
+              <span style="color:var(--mut)">等待事件…</span>
+              <div class="ev" id="ev1">● 收到 <b>双击</b> · Ring 01 · 9:41:22</div>
+              <div class="ev" id="ev2">● 动作稳定，可用于绑定 ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 name & bind -->
+      <div class="pane" data-p="4">
+        <div class="ptitle">给它起个名，绑上预案</div>
+        <div class="psub">按你的习惯命名；可以现在绑一条预案，也可以先不绑。</div>
+        <div class="card pad">
+          <input class="nameinput" id="sigName" value="双击 Ring 01" />
+          <div class="bindsel" id="bindsel">
+            <div class="bopt sel" data-b="救急脱身"><span class="bk"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="3"><path d="M5 12l4 4 10-10"/></svg></span><b>救急脱身</b><small>待绑定</small></div>
+            <div class="bopt" data-b="none"><span class="bk"></span><b>暂不绑定</b><small>之后在预案里再绑</small></div>
+          </div>
+          <div class="psub" id="conflict" style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--live);">✓ 无绑定冲突 · 该动作当前未被其他已启用预案占用</div>
+        </div>
+      </div>
+
+      <!-- DONE -->
+      <div class="pane" data-p="5">
+        <div class="card">
+          <div class="doneWrap">
+            <div class="big"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5 11-12"/></svg></div>
+            <h3 id="doneName">双击 Ring 01 已就绪</h3>
+            <p>暗号已接入，冲突、防误触和在线检查都通过了。</p>
+            <div class="statechain">
+              <span class="sc">✓ 系统已配对</span>
+              <span class="sc">✓ SNAKE1 已接入</span>
+              <span class="sc">✓ 暗号已可用</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /body -->
+
+    <div class="foot" id="foot">
+      <a class="b ghost" id="prevBtn" href="snake-signal-config.html">退出</a>
+      <div class="b pink dis" id="nextBtn">下一步 <span class="arw">→</span></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},1900);}
+
+  var panes=document.querySelectorAll('.pane'),rsts=document.querySelectorAll('.rst'),
+      nextBtn=document.getElementById('nextBtn'),prevBtn=document.getElementById('prevBtn');
+  var cur=0, MAX=5; // 0..4 steps, 5=done
+
+  function enable(on){nextBtn.classList.toggle('dis',!on);}
+  function showRail(){
+    rsts.forEach(function(r){var i=+r.dataset.s;r.classList.remove('on','done');if(i<cur)r.classList.add('done');else if(i===cur)r.classList.add('on');});
+  }
+  function go(n){
+    cur=n;
+    panes.forEach(function(p){p.classList.toggle('on',+p.dataset.p===cur);});
+    showRail();
+    // per-step setup
+    enable(false);
+    prevBtn.textContent = cur===0?'退出':'上一步';
+    if(cur===0){startScan();}
+    if(cur===1){readCaps();}
+    if(cur===2){enable(true);nextBtn.innerHTML='下一步 <span class="arw">→</span>';}
+    if(cur===3){/* wait for test */ nextBtn.innerHTML='下一步 <span class="arw">→</span>';}
+    if(cur===4){enable(true);nextBtn.innerHTML='完成接入 <span class="arw">→</span>';}
+    if(cur===5){
+      document.getElementById('rail').style.opacity='.55';
+      document.getElementById('doneName').textContent=(document.getElementById('sigName').value||'双击 Ring 01')+' 已就绪';
+      nextBtn.innerHTML='去看这个暗号 <span class="arw">→</span>';enable(true);
+      prevBtn.style.display='none';
+    }
+  }
+
+  // step1: scan
+  var scanned=false;
+  function startScan(){
+    scanned=false;
+    var stt=document.getElementById('scanStt'),dev1=document.getElementById('dev1'),retry=document.getElementById('retry');
+    dev1.classList.remove('show');retry.style.display='none';stt.textContent='正在扫描附近设备…';
+    setTimeout(function(){
+      dev1.classList.add('show');stt.textContent='发现 1 台设备 · 点击连接';
+    },1400);
+  }
+  document.getElementById('dev1').addEventListener('click',function(){
+    if(scanned)return;scanned=true;
+    document.getElementById('scanStt').textContent='连接成功 · SNAKE1 已接入 Ring 01';
+    toast('已连接 · 区分：系统已配对 → SNAKE1 已接入');
+    enable(true);
+  });
+
+  // step2: read capabilities
+  function readCaps(){
+    var cbtns=document.querySelectorAll('#caps .cbtn'),hint=document.getElementById('capHint');
+    cbtns.forEach(function(c){c.classList.remove('show','ok');});
+    hint.textContent='读取中…';
+    var i=0;
+    (function reveal(){
+      if(i<cbtns.length){
+        var c=cbtns[i];c.classList.add('show');
+        if(!c.classList.contains('dim'))c.classList.add('ok');
+        i++;setTimeout(reveal,320);
+      }else{
+        hint.textContent='读到 3 个稳定动作 · 三击该型号不稳定，已禁用';
+        enable(true);
+      }
+    })();
+  }
+
+  // step3: steppers + toggles
+  document.querySelectorAll('.stepper').forEach(function(sp){
+    var v=sp.querySelector('.v'),u=sp.dataset.u,step=+sp.dataset.step,min=+sp.dataset.min,max=+sp.dataset.max;
+    sp.querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){
+      var n=parseInt(v.textContent,10)+(+b.dataset.d)*step;if(n<min)n=min;if(n>max)n=max;v.textContent=n+u;
+    });});
+  });
+  document.querySelectorAll('.tgl').forEach(function(t){t.addEventListener('click',function(){t.classList.toggle('on');});});
+
+  // step4: test
+  var tested=false,testing=false;
+  document.getElementById('testBtn').addEventListener('click',function(){
+    if(testing)return;testing=true;
+    var log=document.getElementById('testLog'),e1=document.getElementById('ev1'),e2=document.getElementById('ev2');
+    log.querySelector('span').style.display='none';e1.classList.remove('show');e2.classList.remove('show');
+    setTimeout(function(){e1.classList.add('show');},500);
+    setTimeout(function(){e2.classList.add('show');testing=false;tested=true;enable(true);toast('测试通过 · 只收到事件，未运行预案');},1100);
+  });
+
+  // step5: bind select
+  document.querySelectorAll('.bopt').forEach(function(o){
+    o.addEventListener('click',function(){
+      document.querySelectorAll('.bopt').forEach(function(x){x.classList.remove('sel');});
+      o.classList.add('sel');
+      document.getElementById('conflict').textContent = o.dataset.b==='none'
+        ? '未绑定 · 之后可在预案详情里绑定'
+        : '✓ 无绑定冲突 · 该动作当前未被其他已启用预案占用';
+    });
+  });
+
+  // nav
+  nextBtn.addEventListener('click',function(){
+    if(nextBtn.classList.contains('dis'))return;
+    if(cur===5){location.href='snake-signal-detail.html';return;}
+    go(cur+1);
+  });
+  prevBtn.addEventListener('click',function(e){
+    if(cur===0)return; // href handles exit
+    e.preventDefault();
+    go(cur-1);
+  });
+
+  go(0);
+})();
+</script>
+</body>
+</html>

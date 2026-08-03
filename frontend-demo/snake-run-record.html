@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 运行记录</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .app{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 0 30px;}
+  .app::-webkit-scrollbar{display:none;}
+
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:11px;padding:11px 16px 12px;}
+  .back{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .back:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .htitle{font-family:var(--disp);font-size:19px;letter-spacing:-.5px;color:var(--ink);}
+
+  .filters{display:flex;gap:8px;overflow-x:auto;padding:14px 18px 4px;}
+  .filters::-webkit-scrollbar{display:none;}
+  .fc{flex:0 0 auto;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.4px;color:var(--ink);background:var(--card);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:6px 10px;transition:transform .06s steps(2,jump-none),box-shadow .06s steps(2,jump-none);}
+  .fc.on{background:var(--pink);}
+  .fc:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  .win{margin:10px 18px 6px;background:var(--card);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);}
+  .win-top{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:3px solid var(--ink);}
+  .ch{display:flex;align-items:center;gap:9px;font-family:var(--ui);font-weight:800;font-size:15px;color:var(--ink);}
+  .ch .hash{width:24px;height:24px;flex:0 0 auto;background:var(--sun);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:14px;color:var(--ink);}
+  .mem{font-family:var(--mono);font-weight:700;font-size:10px;color:var(--ink);border:2px solid var(--ink);padding:3px 7px;background:var(--cream);}
+
+  .rows{padding:2px 0;}
+  .row{display:flex;gap:11px;align-items:flex-start;padding:11px 14px;cursor:pointer;border-bottom:2px dashed #eee2c2;transition:background .1s;}
+  .row:last-child{border-bottom:0;}
+  .row:active{background:#fff6df;}
+  .ic{width:34px;height:34px;flex:0 0 auto;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:#fff;}
+  .ic.ok{background:var(--live);}
+  .ic.fail{background:var(--red);}
+  .ic.cancel{background:var(--mut);}
+  .rc{flex:1;min-width:0;}
+  .rh{display:flex;align-items:center;gap:8px;}
+  .rh b{font-family:var(--ui);font-weight:800;font-size:14px;color:var(--ink);}
+  .tg{font-family:var(--mono);font-weight:700;font-size:8px;letter-spacing:.4px;color:var(--ink);border:1.5px solid var(--ink);padding:2px 5px;margin-left:auto;flex:0 0 auto;white-space:nowrap;}
+  .tg.real{background:var(--sun);}
+  .tg.test{background:var(--cream);color:var(--mut);}
+  .rm{font-family:var(--ui);font-weight:500;font-size:12px;line-height:1.4;color:#3a352c;margin-top:4px;}
+  .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .mc{font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:.2px;color:var(--ink);border:1.5px solid var(--ink);padding:2px 6px;background:var(--cream);display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  .mc .sq{width:7px;height:7px;flex:0 0 auto;border:1px solid var(--ink);}
+  .mc.ok{color:#256b3a;border-color:#256b3a;}
+  .mc.bad{background:#FDE3DC;color:var(--red);border-color:var(--red);}
+
+  .empty{display:none;padding:26px 20px;text-align:center;}
+  .empty p{font-family:var(--ui);font-weight:600;font-size:13px;color:var(--mut);line-height:1.6;}
+  .empty .clr{margin-top:12px;display:inline-block;font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:7px 12px;cursor:pointer;}
+
+  .foot{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--mut);text-align:center;padding:12px 20px 4px;}
+
+  .toast{position:absolute;left:50%;bottom:60px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:20;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:300px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <div class="head">
+        <a class="back" href="snake-chat.html" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </a>
+        <span class="htitle">运行记录</span>
+      </div>
+
+      <div class="filters" id="filters">
+        <div class="fc on" data-f="all">全部</div>
+        <div class="fc" data-f="real">正式运行</div>
+        <div class="fc" data-f="test">测试</div>
+        <div class="fc" data-f="ok">成功</div>
+        <div class="fc" data-f="bad">失败/取消</div>
+      </div>
+
+      <div class="win">
+        <div class="win-top">
+          <div class="ch"><span class="hash">#</span>最近记录</div>
+          <span class="mem" id="count">5 条</span>
+        </div>
+        <div class="rows" id="rows">
+
+          <div class="row" data-kind="real" data-res="ok">
+            <div class="ic ok"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div>
+            <div class="rc">
+              <div class="rh"><b>救急脱身</b><span class="tg real">正式</span></div>
+              <div class="rm">Ring01 双击 → 妈妈来电已接通，成功脱身。</div>
+              <div class="meta">
+                <span class="mc">刚刚 · 9:41</span>
+                <span class="mc ok">成功 · 通话 24s</span>
+                <span class="mc">耗时 6s</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-kind="real" data-res="ok">
+            <div class="ic ok"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div>
+            <div class="rc">
+              <div class="rh"><b>深夜到家报平安</b><span class="tg real">正式</span></div>
+              <div class="rm">耳机长按 → 给妈妈发了一条「到家了，别等门」。</div>
+              <div class="meta">
+                <span class="mc">昨天 23:41</span>
+                <span class="mc ok">成功 · 已送达</span>
+                <span class="mc">耗时 2s</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-kind="real" data-res="ok">
+            <div class="ic ok"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div>
+            <div class="rc">
+              <div class="rh"><b>救急脱身</b><span class="tg real">正式</span></div>
+              <div class="rm">Ring01 双击 → 来电接通，帮你从饭局提前离场。</div>
+              <div class="meta">
+                <span class="mc">昨天 20:12</span>
+                <span class="mc ok">成功 · 通话 18s</span>
+                <span class="mc">耗时 6s</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-kind="test" data-res="ok">
+            <div class="ic ok"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div>
+            <div class="rc">
+              <div class="rh"><b>救急脱身</b><span class="tg test">测试</span></div>
+              <div class="rm">真实全链路测试 → 来电正常，话术播报清晰。</div>
+              <div class="meta">
+                <span class="mc">前天 15:03</span>
+                <span class="mc ok">测试通过</span>
+                <span class="mc">耗时 5s</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-kind="real" data-res="bad">
+            <div class="ic cancel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+            <div class="rc">
+              <div class="rh"><b>救急脱身</b><span class="tg real">正式</span></div>
+              <div class="rm">Ring01 双击 → 你在 3 秒缓冲内取消，没有真的拨号。</div>
+              <div class="meta">
+                <span class="mc">3 天前 19:20</span>
+                <span class="mc bad">已取消 · 无真实动作</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="empty" id="empty">
+          <p id="emptyTxt">这个筛选条件下暂时没有记录。</p>
+          <span class="clr" id="clr">清除筛选</span>
+        </div>
+      </div>
+
+      <div class="foot">RAFT EDITION · 测试与正式运行分开记录 · 敏感内容默认脱敏</div>
+
+    </div><!-- /app -->
+
+    <div class="toast" id="toast"></div>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},1700);}
+
+  var chips=document.querySelectorAll('.fc'), rows=document.querySelectorAll('#rows .row');
+  var countEl=document.getElementById('count'), emptyEl=document.getElementById('empty'), emptyTxt=document.getElementById('emptyTxt');
+  var label={all:'全部',real:'正式运行',test:'测试',ok:'成功',bad:'失败/取消'};
+  function match(r,f){
+    if(f==='all')return true;
+    if(f==='real'||f==='test')return r.dataset.kind===f;
+    if(f==='ok')return r.dataset.res==='ok';
+    if(f==='bad')return r.dataset.res==='bad';
+    return true;
+  }
+  function applyFilter(f){
+    var shown=0;
+    rows.forEach(function(r){var ok=match(r,f);r.style.display=ok?'':'none';if(ok)shown++;});
+    countEl.textContent=shown+' 条';
+    if(shown===0){emptyEl.style.display='block';emptyTxt.textContent='「'+label[f]+'」下暂时没有记录。';}
+    else emptyEl.style.display='none';
+  }
+  chips.forEach(function(c){c.addEventListener('click',function(){chips.forEach(function(x){x.classList.remove('on');});c.classList.add('on');applyFilter(c.dataset.f);});});
+  document.getElementById('clr').addEventListener('click',function(){chips.forEach(function(x){x.classList.remove('on');});document.querySelector('.fc[data-f="all"]').classList.add('on');applyFilter('all');});
+
+  rows.forEach(function(r){r.addEventListener('click',function(){location.href='snake-run-detail.html';});});
+})();
+</script>
+</body>
+</html>

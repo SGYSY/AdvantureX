@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 预案卷宗库</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --paper:#EadFbf;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .app{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 0 30px;}
+  .app::-webkit-scrollbar{display:none;}
+
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:11px;padding:11px 16px 12px;}
+  .back{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .back:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .htitle{font-family:var(--disp);font-size:18px;letter-spacing:-.5px;color:var(--ink);}
+
+  .hero{padding:15px 18px 4px;}
+  .kicker{display:inline-block;font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:2px;color:var(--ink);background:var(--card);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:4px 9px;margin-bottom:10px;text-transform:uppercase;}
+  .hl{font-family:var(--disp);font-weight:900;color:var(--ink);font-size:30px;line-height:1;letter-spacing:-1px;}
+  .hsub{font-family:var(--ui);font-weight:600;font-size:12px;color:#4a463c;margin-top:8px;line-height:1.5;}
+
+  /* import bar */
+  .import{margin:14px 18px 0;display:flex;align-items:center;gap:11px;background:var(--ink);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--sun);padding:12px 13px;cursor:pointer;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .import:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--sun);}
+  .import .ii{width:34px;height:34px;flex:0 0 auto;background:var(--sun);border:2px solid var(--sun);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .import .it{flex:1;min-width:0;}
+  .import .it b{font-family:var(--ui);font-weight:900;font-size:13px;color:var(--sun);display:block;}
+  .import .it small{font-family:var(--mono);font-weight:700;font-size:9px;color:var(--pink);}
+  .import .arw{font-family:var(--disp);font-size:16px;color:var(--sun);}
+
+  .sec-h{display:flex;align-items:center;gap:8px;margin:18px 18px 10px;}
+  .sec-h .hash{width:22px;height:22px;flex:0 0 auto;background:var(--sun);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:12px;color:var(--ink);}
+  .sec-h b{font-family:var(--ui);font-weight:900;font-size:14px;color:var(--ink);}
+  .sec-h .n{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--mut);}
+
+  /* case file card */
+  .cf{margin:0 18px 14px;background:var(--paper);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);position:relative;overflow:hidden;}
+  .cf::before{content:'';position:absolute;left:16px;top:0;bottom:0;width:2px;background:repeating-linear-gradient(to bottom,var(--ink) 0 5px,transparent 5px 11px);opacity:.32;}
+  .cf-top{background:#3a2f22;padding:10px 12px 10px 24px;position:relative;}
+  .cf-top .kl{font-family:var(--mono);font-weight:700;font-size:8px;letter-spacing:2px;color:#d9b477;text-transform:uppercase;}
+  .cf-top b{font-family:var(--disp);font-size:18px;letter-spacing:-.4px;color:#f6ecd2;display:block;line-height:1.05;margin-top:2px;}
+  .cf-top .no{font-family:var(--mono);font-weight:700;font-size:8.5px;color:#c69a5e;margin-top:3px;}
+  .cf-clip{position:absolute;top:-5px;right:14px;width:15px;height:32px;border:2.5px solid #9a9488;border-bottom:none;border-radius:8px 8px 0 0;transform:rotate(8deg);z-index:4;}
+  .cf-stamp{position:absolute;top:10px;right:32px;font-family:var(--disp);font-size:10px;letter-spacing:.5px;padding:2px 6px;transform:rotate(-10deg);border:2.5px solid;z-index:5;}
+  .cf-stamp.loaded{color:var(--live);border-color:var(--live);}
+  .cf-stamp.able{color:var(--pink2);border-color:var(--pink2);}
+  .cf-stamp.need{color:var(--red);border-color:var(--red);}
+
+  .cf-body{padding:9px 12px 4px 24px;}
+  .cf-mo{font-family:var(--ui);font-weight:600;font-size:11.5px;color:#5c5138;line-height:1.5;}
+  .cf-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .cf-tags .t{font-family:var(--mono);font-weight:700;font-size:8.5px;color:#2a2417;border:1.5px solid var(--ink);background:#f6ecd2;padding:2px 6px;display:flex;align-items:center;gap:4px;}
+  .cf-tags .t .sq{width:6px;height:6px;border:1px solid var(--ink);}
+  .cf-tags .t.warn{background:#FDE3DC;color:var(--red);border-color:var(--red);}
+
+  .cf-foot{padding:10px 12px 11px 24px;background:#ddceA6;border-top:2.5px solid var(--ink);margin-top:8px;}
+  .loadbtn{width:100%;cursor:pointer;font-family:var(--ui);font-weight:800;font-size:13px;border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:11px;display:flex;align-items:center;justify-content:center;gap:7px;color:var(--ink);background:var(--pink);transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .loadbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink);}
+  .loadbtn.done{background:var(--live);color:#fff;}
+  .loadbtn.dim{background:#cbbf9a;color:#6b6047;}
+  .loadbtn .arw{font-family:var(--disp);font-size:14px;}
+
+  .foot{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--mut);text-align:center;padding:8px 20px 4px;}
+
+  /* confirm sheet */
+  .mask{position:absolute;inset:0;z-index:30;background:rgba(23,20,15,.55);display:none;align-items:flex-end;}
+  .mask.show{display:flex;}
+  .sheet{width:100%;background:var(--card);border-top:3px solid var(--ink);box-shadow:0 -8px 0 rgba(255,109,174,.3);padding:18px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .18s steps(4,jump-none);}
+  .mask.show .sheet{transform:translateY(0);}
+  .sheet .sh-ic{width:46px;height:46px;background:var(--sun);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);margin-bottom:12px;}
+  .sheet h3{font-family:var(--disp);font-size:20px;letter-spacing:-.5px;color:var(--ink);}
+  .sheet p{font-family:var(--ui);font-weight:600;font-size:13px;line-height:1.55;color:#3a352c;margin-top:8px;}
+  .sheet .acts{display:flex;gap:10px;margin-top:16px;}
+  .sb{cursor:pointer;font-family:var(--ui);font-weight:800;font-size:14px;border:3px solid var(--ink);padding:13px;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .sb.ghost{background:var(--card);box-shadow:4px 4px 0 var(--ink);flex:1;}
+  .sb.pink{background:var(--pink);box-shadow:4px 4px 0 var(--ink);flex:1.4;}
+  .sb:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .sb .arw{font-family:var(--disp);font-size:15px;}
+
+  .toast{position:absolute;left:50%;bottom:40px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:40;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:320px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <div class="head">
+        <a class="back" href="snake-settings.html" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </a>
+        <span class="htitle">预案卷宗库</span>
+      </div>
+
+      <div class="hero">
+        <div class="kicker">CASE FILES · 卷宗库</div>
+        <h1 class="hl">现成的<br>办案卷宗<span style="color:var(--pink2)">。</span></h1>
+        <div class="hsub">这些是整理好的预案模板。加载后会作为<b>草稿</b>进入你的预案，缺的暗号或装备再补，测试通过才启用。</div>
+      </div>
+
+      <!-- import from file -->
+      <div class="import" id="importBtn">
+        <div class="ii"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg></div>
+        <div class="it"><b>从文件导入卷宗</b><small>手动加载 .snk 卷宗文件</small></div>
+        <span class="arw">＋</span>
+      </div>
+
+      <div class="sec-h"><span class="hash">#</span><b>模板卷宗</b><span class="n">4 份</span></div>
+
+      <!-- cards -->
+      <div id="cards">
+
+        <div class="cf" data-name="救急脱身" data-state="loaded">
+          <span class="cf-clip"></span>
+          <div class="cf-top"><div class="kl">CASE FILE</div><b>救急脱身</b><div class="no">NO. SNK-0421</div><span class="cf-stamp loaded">已加载</span></div>
+          <div class="cf-body">
+            <div class="cf-mo">相亲 / 饭局怕冷场 → 双击戒指，用「妈妈」来电给你台阶下。</div>
+            <div class="cf-tags"><span class="t"><span class="sq" style="background:var(--pink)"></span>Ring01 双击</span><span class="t"><span class="sq" style="background:var(--sun)"></span>电话</span><span class="t">3s 可取消</span></div>
+          </div>
+          <div class="cf-foot"><div class="loadbtn done" data-a="loaded">已在我的预案里 ✓</div></div>
+        </div>
+
+        <div class="cf" data-name="深夜到家报平安" data-state="able">
+          <span class="cf-clip"></span>
+          <div class="cf-top"><div class="kl">CASE FILE</div><b>深夜到家报平安</b><div class="no">NO. SNK-0508</div><span class="cf-stamp able">可加载</span></div>
+          <div class="cf-body">
+            <div class="cf-mo">加班晚归想让家人安心 → 耳机长按，替你发一条到家消息。</div>
+            <div class="cf-tags"><span class="t"><span class="sq" style="background:var(--pink)"></span>耳机长按</span><span class="t"><span class="sq" style="background:var(--sun)"></span>消息</span><span class="t">模板可改</span></div>
+          </div>
+          <div class="cf-foot"><div class="loadbtn" data-a="able">加载到我的预案 <span class="arw">→</span></div></div>
+        </div>
+
+        <div class="cf" data-name="面试前定心" data-state="able">
+          <span class="cf-clip"></span>
+          <div class="cf-top"><div class="kl">CASE FILE</div><b>面试前定心</b><div class="no">NO. SNK-0613</div><span class="cf-stamp able">可加载</span></div>
+          <div class="cf-body">
+            <div class="cf-mo">大厂终面前紧张 → 提前打来陪你过一遍开场白。</div>
+            <div class="cf-tags"><span class="t"><span class="sq" style="background:var(--pink)"></span>Ring01 双击</span><span class="t"><span class="sq" style="background:var(--sun)"></span>电话</span><span class="t warn">暗号会冲突</span></div>
+          </div>
+          <div class="cf-foot"><div class="loadbtn" data-a="able">加载到我的预案 <span class="arw">→</span></div></div>
+        </div>
+
+        <div class="cf" data-name="出差遛狗巡逻" data-state="need">
+          <span class="cf-clip"></span>
+          <div class="cf-top"><div class="kl">CASE FILE</div><b>出差遛狗巡逻</b><div class="no">NO. SNK-0777</div><span class="cf-stamp need">需装备</span></div>
+          <div class="cf-body">
+            <div class="cf-mo">出差时想让机械狗在家巡一圈 → 需要先接入机械狗。</div>
+            <div class="cf-tags"><span class="t"><span class="sq" style="background:var(--pink)"></span>定时/暗号</span><span class="t warn">机械狗未接入</span></div>
+          </div>
+          <div class="cf-foot"><div class="loadbtn dim" data-a="need">缺装备 · 仍可存为草稿</div></div>
+        </div>
+
+      </div>
+
+      <div class="foot">RAFT EDITION · 加载的卷宗都是草稿 · 测试通过才启用</div>
+
+    </div><!-- /app -->
+
+    <!-- confirm sheet -->
+    <div class="mask" id="mask">
+      <div class="sheet">
+        <div class="sh-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h5l2 3h9v11H4z"/></svg></div>
+        <h3 id="shTitle">加载这份卷宗？</h3>
+        <p id="shDesc">会把它作为草稿放进你的预案。缺的暗号或装备可以之后逐项补，测试通过后再启用。</p>
+        <div class="acts">
+          <div class="sb ghost" id="shCancel">再想想</div>
+          <a class="sb pink" id="shGo" href="snake-plan-list.html">加载为草稿 <span class="arw">→</span></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},2000);}
+
+  var mask=document.getElementById('mask'),shTitle=document.getElementById('shTitle'),shDesc=document.getElementById('shDesc');
+  var pending=null;
+
+  document.querySelectorAll('.loadbtn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var cf=btn.closest('.cf'),name=cf.dataset.name,state=cf.dataset.state;
+      if(state==='loaded'){toast('「'+name+'」已经在你的预案里了');return;}
+      pending=cf;
+      shTitle.textContent='加载「'+name+'」？';
+      if(state==='need'){
+        shDesc.textContent='这份卷宗依赖「机械狗」，目前还没接入。可以先存为草稿，接入装备后再测试启用。';
+      }else if(name==='面试前定心'){
+        shDesc.textContent='它用的「Ring01 双击」和「救急脱身」冲突。加载后会作为草稿，换个动作或替换绑定后再启用。';
+      }else{
+        shDesc.textContent='会把它作为草稿放进你的预案。缺的暗号或装备可以之后逐项补，测试通过后再启用。';
+      }
+      mask.classList.add('show');
+    });
+  });
+
+  document.getElementById('shCancel').addEventListener('click',function(){mask.classList.remove('show');});
+  mask.addEventListener('click',function(e){if(e.target===mask)mask.classList.remove('show');});
+  document.getElementById('shGo').addEventListener('click',function(){
+    if(pending){
+      var btn=pending.querySelector('.loadbtn'),stamp=pending.querySelector('.cf-stamp');
+      pending.dataset.state='loaded';
+      btn.className='loadbtn done';btn.innerHTML='已加载为草稿 ✓';
+      stamp.className='cf-stamp loaded';stamp.textContent='已加载';
+    }
+    // navigates to plan list via href
+  });
+
+  document.getElementById('importBtn').addEventListener('click',function(){toast('从文件导入 .snk 卷宗（demo 占位）');});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 单次运行详情</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .app{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 0 120px;}
+  .app::-webkit-scrollbar{display:none;}
+
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:11px;padding:11px 16px 12px;}
+  .back{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .back:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .htitle{font-family:var(--disp);font-size:19px;letter-spacing:-.5px;color:var(--ink);}
+  .head-sp{flex:1;}
+  .tg{font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:.5px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:4px 7px;white-space:nowrap;}
+  .tg.real{background:var(--sun);}
+
+  /* result banner */
+  .rb{margin:14px 18px 0;background:var(--live);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:14px;display:flex;align-items:center;gap:12px;color:#fff;}
+  .rb .ic{width:44px;height:44px;flex:0 0 auto;background:#fff;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--live);}
+  .rb .rt b{font-family:var(--disp);font-size:20px;letter-spacing:-.4px;color:#fff;}
+  .rb .rt small{display:block;font-family:var(--mono);font-weight:700;font-size:10px;color:#eafff0;margin-top:3px;}
+
+  /* meta strip */
+  .strip{display:flex;gap:8px;margin:12px 18px 0;flex-wrap:wrap;}
+  .sc{font-family:var(--mono);font-weight:700;font-size:9.5px;letter-spacing:.2px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);background:var(--card);padding:5px 8px;display:flex;align-items:center;gap:5px;}
+  .sc .sq{width:8px;height:8px;border:1px solid var(--ink);}
+
+  .sec{margin:18px 18px 0;}
+  .sec-h{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+  .sec-h .hash{width:22px;height:22px;flex:0 0 auto;background:var(--sun);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:12px;color:var(--ink);}
+  .sec-h b{font-family:var(--ui);font-weight:900;font-size:14px;color:var(--ink);}
+  .sec-h .hint{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:9px;color:var(--mut);}
+
+  /* timeline */
+  .tl{position:relative;padding-left:6px;}
+  .tevt{position:relative;display:flex;gap:12px;padding-bottom:4px;}
+  .tevt .rail{position:relative;width:30px;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;}
+  .tevt .node{width:28px;height:28px;flex:0 0 auto;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;color:var(--ink);background:var(--card);z-index:2;}
+  .tevt .node.ok{background:var(--live);color:#fff;}
+  .tevt .node.act{background:var(--coral);color:var(--ink);}
+  .tevt .node.info{background:var(--sun);}
+  .tevt .line{position:absolute;top:28px;bottom:-6px;width:3px;background:var(--ink);z-index:1;}
+  .tevt:last-child .line{display:none;}
+  .tevt .body{flex:1;min-width:0;background:var(--card);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:10px 11px;margin-bottom:12px;}
+  .tevt .body .th{display:flex;align-items:center;gap:7px;}
+  .tevt .body .th b{font-family:var(--ui);font-weight:800;font-size:13px;color:var(--ink);}
+  .tevt .body .th .t{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:9px;color:var(--mut);white-space:nowrap;}
+  .tevt .body p{font-family:var(--ui);font-weight:500;font-size:12px;line-height:1.5;color:#3a352c;margin-top:5px;}
+  .tevt .body .kv{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+  .tevt .body .kv .k{font-family:var(--mono);font-weight:700;font-size:8.5px;color:var(--ink);border:1.5px solid var(--ink);background:var(--cream);padding:2px 5px;}
+  .tevt .body .kv .k i{font-style:normal;color:var(--pink2);}
+  .tevt .body .err{font-family:var(--mono);font-weight:700;font-size:8.5px;color:var(--mut);margin-top:6px;}
+
+  /* feedback */
+  .fbwrap{margin:18px 18px 0;background:var(--card);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--pink);padding:14px;}
+  .fbwrap .qt{font-family:var(--ui);font-weight:900;font-size:14px;color:var(--ink);}
+  .fbwrap .qs{font-family:var(--ui);font-weight:500;font-size:11.5px;color:#5a5347;margin-top:5px;line-height:1.5;}
+  .fbbtns{display:flex;gap:10px;margin-top:12px;}
+  .fb{flex:1;cursor:pointer;font-family:var(--ui);font-weight:800;font-size:13px;border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:11px;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--ink);background:var(--card);transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .fb.sel.good{background:var(--live);color:#fff;}
+  .fb.sel.bad{background:var(--coral);}
+  .fb:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+  .fbnote{font-family:var(--ui);font-weight:600;font-size:10.5px;color:var(--mut);margin-top:10px;line-height:1.5;display:none;}
+  .fbnote.show{display:block;}
+
+  /* bottom dock */
+  .dock{position:absolute;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:3px solid var(--ink);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;}
+  .b{cursor:pointer;user-select:none;font-family:var(--ui);font-weight:800;font-size:14px;border:3px solid var(--ink);padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;color:var(--ink);transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);white-space:nowrap;}
+  .b.pink{background:var(--pink);box-shadow:4px 4px 0 var(--ink);flex:1;}
+  .b.ghost{background:var(--card);box-shadow:4px 4px 0 var(--ink);flex:1;}
+  .b:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .b .arw{font-family:var(--disp);font-size:15px;}
+
+  .toast{position:absolute;left:50%;bottom:96px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:40;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:320px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <div class="head">
+        <a class="back" href="snake-run-record.html" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </a>
+        <span class="htitle">运行详情</span>
+        <span class="head-sp"></span>
+        <span class="tg real">正式运行</span>
+      </div>
+
+      <!-- result banner -->
+      <div class="rb">
+        <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5 11-12"/></svg></div>
+        <div class="rt">
+          <b>成功脱身</b>
+          <small>救急脱身 · 今天 9:41 · 总耗时 6s</small>
+        </div>
+      </div>
+
+      <div class="strip">
+        <span class="sc"><span class="sq" style="background:var(--pink)"></span>暗号 Ring01 双击</span>
+        <span class="sc"><span class="sq" style="background:var(--sun)"></span>装备 电话</span>
+        <span class="sc">事件 #a7f3</span>
+      </div>
+
+      <!-- timeline -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash">≡</span><b>这次发生了什么</b><span class="hint">按时间顺序</span></div>
+        <div class="tl">
+
+          <div class="tevt">
+            <div class="rail"><div class="node ok">1</div><div class="line"></div></div>
+            <div class="body">
+              <div class="th"><b>收到暗号</b><span class="t">9:41:02</span></div>
+              <p>Ring 01 双击，来自你的右手食指。系统按事件 ID 去重，确认是一次真实触发。</p>
+              <div class="kv"><span class="k">来源 <i>Ring 01</i></span><span class="k">事件 <i>#a7f3</i></span><span class="k">已去重</span></div>
+            </div>
+          </div>
+
+          <div class="tevt">
+            <div class="rail"><div class="node ok">2</div><div class="line"></div></div>
+            <div class="body">
+              <div class="th"><b>匹配到预案</b><span class="t">9:41:02</span></div>
+              <p>这个动作当前绑定「救急脱身」，没有触发冲突，进入运行。</p>
+              <div class="kv"><span class="k">预案 <i>救急脱身</i></span><span class="k">无冲突</span></div>
+            </div>
+          </div>
+
+          <div class="tevt">
+            <div class="rail"><div class="node ok">3</div><div class="line"></div></div>
+            <div class="body">
+              <div class="th"><b>权限检查通过</b><span class="t">9:41:02</span></div>
+              <p>调用前重新确认：电话装备已授权拨号、Ring 01 在线。全部满足，允许继续。</p>
+              <div class="kv"><span class="k">电话 <i>已授权</i></span><span class="k">Ring01 <i>在线</i></span></div>
+            </div>
+          </div>
+
+          <div class="tevt">
+            <div class="rail"><div class="node info">4</div><div class="line"></div></div>
+            <div class="body">
+              <div class="th"><b>Snake的判断</b><span class="t">9:41:03</span></div>
+              <p>结合当前时间和你确认过的「怕冷场」偏好，判断这是饭局时段，选用「妈妈」来电身份和一段自然的催促话术。</p>
+              <div class="kv"><span class="k">读取 <i>时间</i></span><span class="k">读取 <i>怕冷场偏好</i></span><span class="k">选择 <i>妈妈来电</i></span></div>
+            </div>
+          </div>
+
+          <div class="tevt">
+            <div class="rail"><div class="node info">5</div><div class="line"></div></div>
+            <div class="body">
+              <div class="th"><b>3 秒延时缓冲</b><span class="t">9:41:03</span></div>
+              <p>给你 3 秒反悔时间。你没有取消，缓冲走完后进入真实拨号。</p>
+              <div class="kv"><span class="k">时长 <i>3s</i></span><span class="k">未取消</span></div>
+            </div>
+          </div>
+
+          <div class="tevt">
+            <div class="rail"><div class="node act">6</div><div class="line"></div></div>
+            <div class="body">
+              <div class="th"><b>拨出救急来电</b><span class="t">9:41:06</span></div>
+              <p>用「妈妈」来电身份真实拨给你，接通后播报了催促话术。这是本次运行里唯一的真实动作。</p>
+              <div class="kv"><span class="k">拨给 <i>本人</i></span><span class="k">来电 <i>妈妈</i></span><span class="k">状态 <i>已接通</i></span></div>
+              <div class="err">状态流转：发起 → 振铃 → 接通（未触发消息兜底）</div>
+            </div>
+          </div>
+
+          <div class="tevt">
+            <div class="rail"><div class="node ok">✓</div></div>
+            <div class="body">
+              <div class="th"><b>完成 · 成功脱身</b><span class="t">9:41:08</span></div>
+              <p>通话 24 秒后你顺势起身离场。整条预案结束，本次为正式运行、已记录。</p>
+              <div class="kv"><span class="k">通话 <i>24s</i></span><span class="k">结果 <i>成功</i></span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- feedback -->
+      <div class="fbwrap">
+        <div class="qt">这次帮到你了吗？</div>
+        <div class="qs">你的反馈不会自动改动已启用预案；如果需要，Snake会据此提出调整、由你确认。</div>
+        <div class="fbbtns">
+          <div class="fb good" id="fbGood"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 3 2l-1 6h5a2 2 0 0 1 2 2l-1.5 6a2 2 0 0 1-2 1.5H7"/></svg> 有帮助</div>
+          <div class="fb bad" id="fbBad"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13V4h3v9zM17 13l-4 8a2 2 0 0 1-3-2l1-6H6a2 2 0 0 1-2-2l1.5-6A2 2 0 0 1 7.5 4H17"/></svg> 没帮上</div>
+        </div>
+        <div class="fbnote" id="fbNote"></div>
+      </div>
+
+    </div><!-- /app -->
+
+    <!-- dock -->
+    <div class="dock">
+      <a class="b ghost" href="snake-plan-detail.html">看这条预案</a>
+      <div class="b pink" id="fixBtn">从这次发起调整 <span class="arw">→</span></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},2000);}
+
+  var good=document.getElementById('fbGood'),bad=document.getElementById('fbBad'),note=document.getElementById('fbNote');
+  function pick(sel,other,cls,txt){
+    other.classList.remove('sel','good','bad');
+    sel.classList.add('sel',cls);
+    note.textContent=txt;note.classList.add('show');
+  }
+  good.addEventListener('click',function(){pick(good,bad,'good','已记下「有帮助」· Snake会保留这套话术和时机。');});
+  bad.addEventListener('click',function(){pick(bad,good,'bad','已记下「没帮上」· 想调整的话，点下方「从这次发起调整」。');});
+
+  document.getElementById('fixBtn').addEventListener('click',function(){location.href='snake-chat.html';});
+})();
+</script>
+</body>
+</html>

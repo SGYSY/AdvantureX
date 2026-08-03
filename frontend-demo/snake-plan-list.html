@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 预案库 · RAFT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .app{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 0 74px;}
+  .app::-webkit-scrollbar{display:none;}
+
+  /* header band */
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;justify-content:space-between;padding:11px 18px 12px;}
+  .logo{display:flex;align-items:center;gap:9px;}
+  .logo .mark{width:26px;height:26px;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);transform:rotate(-4deg);}
+  .logo .wm{font-family:var(--disp);font-size:22px;letter-spacing:-1px;color:var(--ink);}
+  .head-r{display:flex;align-items:center;gap:8px;}
+  .devs{display:flex;align-items:center;gap:6px;}
+  .devchip{position:relative;width:34px;height:34px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .devchip .st{position:absolute;bottom:-3px;right:-3px;width:11px;height:11px;border:2px solid var(--ink);border-radius:50%;background:var(--live);}
+  .devchip .st.on{animation:blink 1.4s steps(2,jump-none) infinite;}
+  @keyframes blink{0%,55%{opacity:1}56%,100%{opacity:.25}}
+  .gear{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .gear:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  /* hero (compact) */
+  .hero{position:relative;padding:16px 20px 4px;}
+  .hrow{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .hl{font-family:var(--disp);font-weight:900;color:var(--ink);font-size:30px;line-height:1;letter-spacing:-1.2px;}
+  .hl .p{color:var(--pink2);}
+  .rec{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.3px;color:var(--mut);text-decoration:none;flex:0 0 auto;}
+  .rec:active{color:var(--ink);}
+  .b{cursor:pointer;user-select:none;font-family:var(--ui);font-weight:800;font-size:14px;border:3px solid var(--ink);padding:12px 15px;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;color:var(--ink);transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .b.pink{background:var(--pink);box-shadow:4px 4px 0 var(--ink);}
+  .b.ghost{background:var(--card);box-shadow:4px 4px 0 var(--ink);}
+  .b:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .b .arw{font-family:var(--disp);font-size:15px;}
+
+  /* running strip */
+  .runstrip{margin:6px 20px 0;cursor:pointer;background:var(--ink);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--coral);display:flex;align-items:center;gap:9px;padding:7px 11px;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .runstrip:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--coral);}
+  .runstrip .pl{width:20px;height:20px;flex:0 0 auto;background:var(--coral);border:2px solid var(--coral);display:flex;align-items:center;justify-content:center;}
+  .runstrip .rt{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px;}
+  .runstrip .rt b{font-family:var(--ui);font-weight:900;font-size:12px;color:var(--sun);line-height:1;}
+  .runstrip .rt small{font-family:var(--mono);font-weight:700;font-size:8.5px;letter-spacing:.3px;color:var(--pink);}
+  .runstrip .ld{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:var(--coral);animation:blink 1s steps(2,jump-none) infinite;}
+
+  /* filter chips */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding:14px 20px 4px;}
+  .filters::-webkit-scrollbar{display:none;}
+  .fc{flex:0 0 auto;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.4px;color:var(--ink);background:var(--card);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:6px 10px;transition:transform .06s steps(2,jump-none),box-shadow .06s steps(2,jump-none);}
+  .fc.on{background:var(--pink);}
+  .fc:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .fc .n{opacity:.55;margin-left:3px;}
+
+  /* window list */
+  .win{margin:8px 20px 6px;background:var(--card);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);}
+  .win-top{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:3px solid var(--ink);}
+  .ch{display:flex;align-items:center;gap:9px;font-family:var(--ui);font-weight:800;font-size:15px;color:var(--ink);}
+  .ch .hash{width:24px;height:24px;flex:0 0 auto;background:var(--sun);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:14px;color:var(--ink);}
+  .mem{font-family:var(--mono);font-weight:700;font-size:10px;color:var(--ink);border:2px solid var(--ink);padding:3px 7px;background:var(--cream);}
+  .rows{padding:4px 0;}
+  .row{display:flex;gap:11px;align-items:flex-start;padding:11px 14px;cursor:pointer;border-left:4px solid transparent;border-bottom:2px dashed #eee2c2;transition:background .1s;}
+  .row:last-child{border-bottom:0;}
+  .row:active{background:#fff6df;}
+  .av{width:34px;height:34px;flex:0 0 auto;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);overflow:hidden;}
+  .av svg{width:100%;height:100%;display:block;}
+  .av.r1{transform:rotate(-5deg);} .av.r2{transform:rotate(5deg);} .av.r3{transform:rotate(-3deg);}
+  .rc{flex:1;min-width:0;}
+  .rh{display:flex;align-items:center;gap:8px;}
+  .rh b{font-family:var(--ui);font-weight:800;font-size:14px;color:var(--ink);}
+  .tg{font-family:var(--mono);font-weight:700;font-size:8.5px;letter-spacing:.5px;color:var(--ink);border:1.5px solid var(--ink);padding:2px 6px;margin-left:auto;flex:0 0 auto;white-space:nowrap;}
+  .tg.live{background:var(--live);color:#fff;}
+  .tg.test{background:var(--amber);}
+  .tg.draft{background:var(--cream);color:var(--mut);}
+  .tg.dead{background:var(--red);color:#fff;}
+  .rm{font-family:var(--ui);font-weight:500;font-size:12.5px;line-height:1.45;color:#3a352c;margin-top:4px;}
+  .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .mc{font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:.2px;color:var(--ink);border:1.5px solid var(--ink);padding:2px 6px;background:var(--cream);display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  .mc.warn{background:#FDE3DC;color:var(--red);border-color:var(--red);}
+  .mc.ok{color:#256b3a;border-color:#256b3a;}
+  .mc .sq{width:7px;height:7px;flex:0 0 auto;border:1px solid var(--ink);}
+
+  .empty{display:none;padding:26px 20px;text-align:center;}
+  .empty p{font-family:var(--ui);font-weight:600;font-size:13px;color:var(--mut);line-height:1.6;}
+  .empty .clr{margin-top:12px;display:inline-block;font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:7px 12px;cursor:pointer;}
+
+  .foot{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--mut);text-align:center;padding:14px 20px 4px;}
+
+  .toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:20;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:300px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+
+  /* tabbar */
+  .tabbar{position:absolute;left:0;right:0;bottom:0;z-index:7;height:64px;display:flex;align-items:stretch;background:var(--card);border-top:3px solid var(--ink);}
+  .tab{flex:1;position:relative;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#a49c88;border-right:2px solid #ece2c4;font-family:var(--mono);font-weight:700;font-size:9.5px;letter-spacing:1px;padding-bottom:3px;transition:transform .06s steps(2,jump-none);}
+  .tab:last-child{border-right:0;}
+  .tab .g{width:22px;height:22px;display:block;}
+  .tab:active{transform:translateY(2px);}
+  .tab.active{background:var(--sun);color:var(--ink);}
+  .tab.active::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--pink);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <!-- pixel sprite defs -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <symbol id="px-snake" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect width="8" height="8" fill="#F5A623"/>
+        <rect x="1" y="0" width="6" height="2" fill="#17140F"/>
+        <rect x="0" y="1" width="1" height="2" fill="#17140F"/>
+        <rect x="7" y="1" width="1" height="2" fill="#17140F"/>
+        <rect x="2" y="3" width="1" height="1" fill="#17140F"/>
+        <rect x="5" y="3" width="1" height="1" fill="#17140F"/>
+        <rect x="1" y="4" width="1" height="1" fill="#FF6DAE"/>
+        <rect x="6" y="4" width="1" height="1" fill="#FF6DAE"/>
+        <rect x="3" y="5" width="2" height="1" fill="#17140F"/>
+        <rect x="6" y="6" width="2" height="2" fill="none" stroke="#17140F" stroke-width="1"/>
+      </symbol>
+      <symbol id="px-case" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect width="8" height="8" fill="#FFE1EE"/>
+        <rect x="3" y="1" width="2" height="1" fill="#17140F"/>
+        <rect x="1" y="2" width="6" height="4" fill="#FF4E9A"/>
+        <rect x="3" y="3" width="2" height="1" fill="#17140F"/>
+        <rect x="1" y="6" width="6" height="1" fill="#17140F"/>
+      </symbol>
+      <symbol id="px-cup" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect width="8" height="8" fill="#FFF3D0"/>
+        <rect x="3" y="0" width="1" height="1" fill="#E88C10" opacity=".7"/>
+        <rect x="1" y="2" width="6" height="1" fill="#17140F"/>
+        <rect x="1" y="3" width="6" height="2" fill="#F5A623"/>
+        <rect x="2" y="5" width="4" height="1" fill="#E88C10"/>
+        <rect x="2" y="6" width="4" height="1" fill="#17140F"/>
+      </symbol>
+      <symbol id="px-ring" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect width="8" height="8" fill="#FFE1EE"/>
+        <rect x="3" y="1" width="2" height="1" fill="#FF4E9A"/>
+        <rect x="2" y="2" width="4" height="1" fill="#FF8FC2"/>
+        <rect x="2" y="4" width="1" height="3" fill="#17140F"/>
+        <rect x="5" y="4" width="1" height="3" fill="#17140F"/>
+        <rect x="3" y="6" width="2" height="1" fill="#17140F"/>
+      </symbol>
+      <symbol id="px-dog" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect width="8" height="8" fill="#EDE6D6"/>
+        <rect x="1" y="1" width="1" height="2" fill="#8A8475"/>
+        <rect x="6" y="1" width="1" height="2" fill="#8A8475"/>
+        <rect x="1" y="2" width="6" height="3" fill="#8A8475"/>
+        <rect x="2" y="3" width="1" height="1" fill="#17140F"/>
+        <rect x="5" y="3" width="1" height="1" fill="#17140F"/>
+        <rect x="1" y="5" width="1" height="2" fill="#8A8475"/>
+        <rect x="3" y="5" width="1" height="2" fill="#8A8475"/>
+        <rect x="6" y="5" width="1" height="2" fill="#8A8475"/>
+      </symbol>
+    </defs></svg>
+
+    <!-- status bar -->
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <!-- header band -->
+      <div class="head">
+        <div class="logo">
+          <svg class="mark"><use href="#px-snake"/></svg>
+          <span class="wm">SNAKE</span>
+        </div>
+        <div class="head-r">
+          <a class="devs" href="snake-signal-config.html" aria-label="已连接设备">
+            <span class="devchip" title="Ring 01 · 在线">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><circle cx="12" cy="14" r="6"/><path d="M9 7l3-4 3 4"/></svg>
+              <span class="st on"></span>
+            </span>
+            <span class="devchip" title="耳机 · 在线">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13v-1a6 6 0 0 1 12 0v1"/><rect x="4" y="13" width="4" height="6" rx="1.5"/><rect x="16" y="13" width="4" height="6" rx="1.5"/></svg>
+              <span class="st on"></span>
+            </span>
+          </a>
+          <a class="gear" href="snake-settings.html" aria-label="设置">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- hero -->
+      <div class="hero">
+        <div class="hrow">
+          <h1 class="hl">我的预案<span class="p">。</span></h1>
+          <a class="rec" href="snake-run-record.html">运行记录 →</a>
+        </div>
+        <a class="b pink" href="snake-conversation.html">＋ 描述新时刻 <span class="arw">→</span></a>
+      </div>
+
+      <!-- running task strip (contextual · §14.8) -->
+      <div class="runstrip" id="runstrip">
+        <div class="pl"><svg width="10" height="12" viewBox="0 0 12 14"><path d="M1 1 L11 7 L1 13 Z" fill="#17140F"/></svg></div>
+        <div class="rt"><b>救急脱身 · 运行中</b><small>3S 后拨出</small></div>
+        <div class="ld"></div>
+      </div>
+
+      <!-- filter chips -->
+      <div class="filters" id="filters">
+        <div class="fc on" data-f="all">全部<span class="n">5</span></div>
+        <div class="fc" data-f="live">已启用<span class="n">2</span></div>
+        <div class="fc" data-f="test">待测试<span class="n">1</span></div>
+        <div class="fc" data-f="draft">草稿<span class="n">1</span></div>
+        <div class="fc" data-f="dead">不可用<span class="n">1</span></div>
+      </div>
+
+      <!-- window list -->
+      <div class="win">
+        <div class="rows" id="rows">
+
+          <div class="row" data-status="live" data-real="1">
+            <svg class="av r1"><use href="#px-case"/></svg>
+            <div class="rc">
+              <div class="rh"><b>救急脱身</b><span class="tg live">已启用</span></div>
+              <div class="rm">相亲/饭局怕冷场脱不了身 → Snake 打个救急来电给你台阶下。</div>
+              <div class="meta">
+                <span class="mc ok">刚刚 · 运行中</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-status="live">
+            <svg class="av r2"><use href="#px-cup"/></svg>
+            <div class="rc">
+              <div class="rh"><b>深夜到家报平安</b><span class="tg live">已启用</span></div>
+              <div class="rm">加班晚归想让家人安心 → Snake 替你发一条到家消息。</div>
+              <div class="meta">
+                <span class="mc ok">昨天 23:41 ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-status="test">
+            <svg class="av r3"><use href="#px-case"/></svg>
+            <div class="rc">
+              <div class="rh"><b>面试前定心</b><span class="tg test">待测试</span></div>
+              <div class="rm">大厂终面前紧张 → Snake 提前打来陪你过一遍开场。</div>
+              <div class="meta">
+                <span class="mc warn">暗号冲突</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-status="draft">
+            <svg class="av r1"><use href="#px-ring"/></svg>
+            <div class="rc">
+              <div class="rh"><b>前任婚礼护航</b><span class="tg draft">草稿</span></div>
+              <div class="rm">去前任婚礼想体面撤退 → 还没想好怎么触发和用什么装备。</div>
+              <div class="meta">
+                <span class="mc warn">缺暗号 · 缺装备</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" data-status="dead">
+            <svg class="av r2"><use href="#px-dog"/></svg>
+            <div class="rc">
+              <div class="rh"><b>出差遛狗巡逻</b><span class="tg dead">不可用</span></div>
+              <div class="rm">出差时想让机械狗在家巡一圈 → 目前跑不起来。</div>
+              <div class="meta">
+                <span class="mc warn">机械狗暂未接入</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="empty" id="empty">
+          <p id="emptyTxt">这个筛选条件下暂时没有预案。</p>
+          <span class="clr" id="clr">清除筛选</span>
+        </div>
+      </div>
+
+    </div><!-- /app -->
+
+    <div class="toast" id="toast">本 demo 只打通了「救急脱身」</div>
+
+    <!-- bottom nav: Snake / 预案 / 暗号 / 装备 -->
+    <nav class="tabbar">
+      <a class="tab" href="snake-chat.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5 H20 V16 H11 L6 20 V16 H4 Z"/></svg>
+        <span>Snake</span>
+      </a>
+      <a class="tab active" href="snake-plan-list.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        <span>预案</span>
+      </a>
+      <a class="tab" href="snake-signal-config.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="2.4" fill="currentColor" stroke="none"/><path d="M7.5 13a4.5 4.5 0 0 1 9 0M4.5 13a7.5 7.5 0 0 1 15 0"/></svg>
+        <span>暗号</span>
+      </a>
+      <a class="tab" href="snake-tool-config.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="1.5"/><path d="M9 8V6.5A3 3 0 0 1 15 6.5V8"/></svg>
+        <span>装备</span>
+      </a>
+    </nav>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},1700);}
+
+  // filter chips
+  var chips=document.querySelectorAll('.fc'), rows=document.querySelectorAll('#rows .row');
+  var countEl=document.getElementById('count'), emptyEl=document.getElementById('empty'), emptyTxt=document.getElementById('emptyTxt');
+  var label={all:'全部',live:'已启用',test:'待测试',draft:'草稿',dead:'不可用'};
+  function applyFilter(f){
+    var shown=0;
+    rows.forEach(function(r){
+      var ok=(f==='all'||r.dataset.status===f);
+      r.style.display=ok?'':'none';
+      if(ok)shown++;
+    });
+    if(countEl)countEl.textContent=shown+' 条';
+    if(shown===0){emptyEl.style.display='block';emptyTxt.textContent='「'+label[f]+'」下暂时没有预案。换个筛选看看?';}
+    else{emptyEl.style.display='none';}
+  }
+  chips.forEach(function(c){
+    c.addEventListener('click',function(){
+      chips.forEach(function(x){x.classList.remove('on');});
+      c.classList.add('on');
+      applyFilter(c.dataset.f);
+    });
+  });
+  document.getElementById('clr').addEventListener('click',function(){
+    chips.forEach(function(x){x.classList.remove('on');});
+    document.querySelector('.fc[data-f="all"]').classList.add('on');
+    applyFilter('all');
+  });
+
+  // rows: only 救急脱身 has a real detail in this demo
+  rows.forEach(function(r){
+    r.addEventListener('click',function(){
+      if(r.dataset.real==='1'){location.href='snake-plan-detail.html';}
+      else{toast('这是示例预案 · 本 demo 只打通「救急脱身」');}
+    });
+  });
+
+  document.getElementById('runstrip').addEventListener('click',function(){location.href='snake-run-active.html';});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · Snake · RAFT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .app{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 0 74px;display:flex;flex-direction:column;}
+  .app::-webkit-scrollbar{display:none;}
+
+  /* header band */
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;justify-content:space-between;padding:11px 18px 12px;flex:0 0 auto;}
+  .logo{display:flex;align-items:center;gap:9px;}
+  .logo .mark{width:26px;height:26px;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);transform:rotate(-4deg);}
+  .logo .wm{font-family:var(--disp);font-size:22px;letter-spacing:-1px;color:var(--ink);}
+  .head-r{display:flex;align-items:center;gap:8px;}
+  .devs{display:flex;align-items:center;gap:6px;}
+  .devchip{position:relative;width:34px;height:34px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .devchip .st{position:absolute;bottom:-3px;right:-3px;width:11px;height:11px;border:2px solid var(--ink);border-radius:50%;background:var(--live);}
+  .devchip.off .st{background:var(--mut);}
+  .devchip .st.on{animation:blink 1.4s steps(2,jump-none) infinite;}
+  @keyframes blink{0%,55%{opacity:1}56%,100%{opacity:.25}}
+  .gear{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .gear:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  /* greeting */
+  .greet{padding:20px 20px 0;flex:0 0 auto;}
+  .greet .hi{font-family:var(--disp);font-weight:900;color:var(--ink);font-size:30px;line-height:1.02;letter-spacing:-1px;}
+  .greet .sub{font-family:var(--ui);font-weight:800;font-size:16px;color:var(--ink);margin-top:8px;}
+  .greet .sub .p{color:var(--pink2);}
+
+  /* hero stage: portrait center + side entries right */
+  .stage{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px 20px 4px;}
+  .portrait{position:relative;width:210px;max-width:56vw;display:flex;flex-direction:column;align-items:center;}
+  .portrait .hero-img{width:100%;image-rendering:pixelated;filter:drop-shadow(4px 5px 0 rgba(23,20,15,.22));position:relative;z-index:2;animation:bob 3s steps(3,jump-none) infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  /* pixel pedestal */
+  .stand{margin-top:-6px;width:150px;height:34px;position:relative;z-index:1;}
+  .stand .s1{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:150px;height:12px;background:var(--pink);border:2.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);}
+  .stand .s2{position:absolute;left:50%;top:20px;transform:translateX(-50%);width:110px;height:9px;background:var(--sun);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);}
+  .spark{position:absolute;z-index:0;}
+  .spark svg{display:block;}
+  .spark.a{top:14%;left:2%;animation:tw 1.6s steps(2,jump-none) infinite;}
+  .spark.b{top:6%;right:4%;animation:tw 1.9s steps(2,jump-none) infinite .3s;}
+  .spark.c{bottom:30%;left:6%;animation:tw 2.2s steps(2,jump-none) infinite .6s;}
+  @keyframes tw{0%,60%{opacity:1;transform:scale(1)}61%,100%{opacity:.25;transform:scale(.7)}}
+
+  /* side round entries */
+  .side{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:15px;z-index:5;}
+  .rnd{position:relative;width:56px;height:56px;cursor:pointer;background:var(--card);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .rnd:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .rnd.p{background:var(--pink);}
+  .rnd.y{background:var(--sun);}
+  .rnd.c{background:var(--cream);}
+  .rnd .lbl{position:absolute;right:64px;top:50%;transform:translateY(-50%) translateX(6px);font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:.5px;color:var(--ink);background:var(--card);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:3px 6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s,transform .12s;}
+  .rnd:hover .lbl,.rnd:active .lbl{opacity:1;transform:translateY(-50%) translateX(0);}
+  .rnd .bdg{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 3px;background:var(--pink2);color:#fff;border:2px solid var(--ink);border-radius:50%;font-family:var(--mono);font-weight:700;font-size:9px;display:flex;align-items:center;justify-content:center;}
+
+  /* chat input bar */
+  .inbar{margin:12px 16px 4px;flex:0 0 auto;display:flex;align-items:center;gap:9px;background:var(--card);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);padding:8px 10px;}
+  .inbar .av{width:32px;height:32px;flex:0 0 auto;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);image-rendering:pixelated;}
+  .inbar input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:var(--ui);font-weight:600;font-size:14px;color:var(--ink);}
+  .inbar input::placeholder{color:var(--mut);}
+  .inbar .mic{width:38px;height:38px;flex:0 0 auto;background:var(--pink);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .inbar .mic:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  /* quick moment chips */
+  .qmoments{display:flex;gap:8px;overflow-x:auto;padding:8px 16px 2px;flex:0 0 auto;}
+  .qmoments::-webkit-scrollbar{display:none;}
+  .qm{flex:0 0 auto;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.3px;color:var(--ink);background:var(--cream);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:6px 9px;transition:transform .06s steps(2,jump-none),box-shadow .06s steps(2,jump-none);}
+  .qm:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  .toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:20;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:300px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+
+  /* tabbar */
+  .tabbar{position:absolute;left:0;right:0;bottom:0;z-index:7;height:64px;display:flex;align-items:stretch;background:var(--card);border-top:3px solid var(--ink);}
+  .tab{flex:1;position:relative;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#a49c88;border-right:2px solid #ece2c4;font-family:var(--mono);font-weight:700;font-size:9.5px;letter-spacing:1px;padding-bottom:3px;transition:transform .06s steps(2,jump-none);}
+  .tab:last-child{border-right:0;}
+  .tab .g{width:22px;height:22px;display:block;}
+  .tab:active{transform:translateY(2px);}
+  .tab.active{background:var(--sun);color:var(--ink);}
+  .tab.active::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--pink);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <!-- pixel sprite defs -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <symbol id="px-snake" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect width="8" height="8" fill="#F5A623"/>
+        <rect x="1" y="0" width="6" height="2" fill="#17140F"/>
+        <rect x="0" y="1" width="1" height="2" fill="#17140F"/>
+        <rect x="7" y="1" width="1" height="2" fill="#17140F"/>
+        <rect x="2" y="3" width="1" height="1" fill="#17140F"/>
+        <rect x="5" y="3" width="1" height="1" fill="#17140F"/>
+        <rect x="1" y="4" width="1" height="1" fill="#FF6DAE"/>
+        <rect x="6" y="4" width="1" height="1" fill="#FF6DAE"/>
+        <rect x="3" y="5" width="2" height="1" fill="#17140F"/>
+        <rect x="6" y="6" width="2" height="2" fill="none" stroke="#17140F" stroke-width="1"/>
+      </symbol>
+      <symbol id="px-star" viewBox="0 0 8 8" shape-rendering="crispEdges">
+        <rect x="3" y="0" width="2" height="8" fill="#F5A623"/>
+        <rect x="0" y="3" width="8" height="2" fill="#F5A623"/>
+        <rect x="2" y="2" width="4" height="4" fill="#FBCF4B"/>
+      </symbol>
+    </defs></svg>
+
+    <!-- status bar -->
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <!-- header band -->
+      <div class="head">
+        <a class="logo" href="snake-onboarding.html" style="text-decoration:none">
+          <svg class="mark"><use href="#px-snake"/></svg>
+          <span class="wm">SNAKE</span>
+        </a>
+        <div class="head-r">
+          <a class="devs" href="snake-signal-config.html" aria-label="已连接设备">
+            <span class="devchip" title="Ring 01 · 在线">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><circle cx="12" cy="14" r="6"/><path d="M9 7l3-4 3 4"/></svg>
+              <span class="st on"></span>
+            </span>
+            <span class="devchip" title="耳机 · 在线">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13v-1a6 6 0 0 1 12 0v1"/><rect x="4" y="13" width="4" height="6" rx="1.5"/><rect x="16" y="13" width="4" height="6" rx="1.5"/></svg>
+              <span class="st on"></span>
+            </span>
+          </a>
+          <a class="gear" href="snake-settings.html" aria-label="设置">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- greeting -->
+      <div class="greet">
+        <div class="hi">嗨！我是 Snake</div>
+        <div class="sub">你的<span class="p">社交僚机</span>，随时待命。</div>
+      </div>
+
+      <!-- hero stage -->
+      <div class="stage">
+        <div class="spark a"><svg width="14" height="14"><use href="#px-star"/></svg></div>
+        <div class="spark b"><svg width="18" height="18"><use href="#px-star"/></svg></div>
+        <div class="spark c"><svg width="12" height="12"><use href="#px-star"/></svg></div>
+
+        <div class="portrait">
+          <img class="hero-img" src="snake/snake_cut.png" alt="Snake" />
+          <div class="stand"><div class="s1"></div><div class="s2"></div></div>
+        </div>
+
+        <!-- side round entries -->
+        <div class="side">
+          <a class="rnd p" href="snake-plan-list.html" aria-label="预案">
+            <span class="lbl">预案</span>
+            <span class="bdg">5</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="1.5"/><path d="M9 3h6v3H9z"/><path d="M9 11h6M9 15h4"/></svg>
+          </a>
+          <a class="rnd y" href="snake-tool-config.html" aria-label="装备">
+            <span class="lbl">装备</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="1.5"/><path d="M8 8V6.5A3 3 0 0 1 16 6.5V8"/></svg>
+          </a>
+          <a class="rnd c" href="snake-signal-config.html" aria-label="暗号">
+            <span class="lbl">暗号</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="2.4" fill="#17140F" stroke="none"/><path d="M7.5 13a4.5 4.5 0 0 1 9 0M4.5 13a7.5 7.5 0 0 1 15 0"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- quick moment chips -->
+      <div class="qmoments">
+        <div class="qm" data-m="相亲饭局怕冷场，想找台阶脱身">相亲怕冷场</div>
+        <div class="qm" data-m="加班晚归，想让家人安心">深夜报平安</div>
+        <div class="qm" data-m="终面前太紧张，想有人陪我过一遍">面试前定心</div>
+      </div>
+
+      <!-- chat input -->
+      <div class="inbar">
+        <input id="chatInput" type="text" placeholder="和Snake聊聊此刻遇到的事…" />
+        <div class="mic" id="mic" aria-label="语音">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>
+        </div>
+      </div>
+
+      <div style="height:6px"></div>
+
+    </div><!-- /app -->
+
+    <div class="toast" id="toast">本 demo 只打通了「救急脱身」</div>
+
+    <!-- bottom nav: Snake / 预案 / 暗号 / 装备 -->
+    <nav class="tabbar">
+      <a class="tab active" href="snake-chat.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5 H20 V16 H11 L6 20 V16 H4 Z"/></svg>
+        <span>Snake</span>
+      </a>
+      <a class="tab" href="snake-plan-list.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        <span>预案</span>
+      </a>
+      <a class="tab" href="snake-signal-config.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="2.4" fill="currentColor" stroke="none"/><path d="M7.5 13a4.5 4.5 0 0 1 9 0M4.5 13a7.5 7.5 0 0 1 15 0"/></svg>
+        <span>暗号</span>
+      </a>
+      <a class="tab" href="snake-tool-config.html">
+        <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="1.5"/><path d="M9 8V6.5A3 3 0 0 1 15 6.5V8"/></svg>
+        <span>装备</span>
+      </a>
+    </nav>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},1700);}
+
+  var input=document.getElementById('chatInput');
+
+  // quick moment chips -> go straight into the conversation
+  document.querySelectorAll('.qm').forEach(function(q){
+    q.addEventListener('click',function(){
+      location.href='snake-conversation.html?m='+encodeURIComponent(q.dataset.m);
+    });
+  });
+
+  function send(){
+    var v=input.value.trim();
+    if(!v){toast('先描述一个需要帮助的时刻');return;}
+    // 一切 Moment 都进对话流，让Snake来拆解
+    location.href='snake-conversation.html?m='+encodeURIComponent(v);
+  }
+  input.addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  document.getElementById('mic').addEventListener('click',send);
+})();
+</script>
+</body>
+</html>

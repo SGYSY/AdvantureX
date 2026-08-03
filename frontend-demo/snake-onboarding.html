@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 认识 Snake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  /* top: progress dots + skip */
+  .otop{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:8px 20px 2px;}
+  .dots{display:flex;gap:7px;}
+  .dots i{width:9px;height:9px;border:2px solid var(--ink);background:var(--card);transition:background .15s,width .15s;}
+  .dots i.on{background:var(--pink);width:22px;}
+  .dots i.done{background:var(--ink);}
+  .skip{font-family:var(--mono);font-weight:700;font-size:11px;color:var(--mut);text-decoration:none;}
+  .skip:active{color:var(--ink);}
+
+  .body{flex:1 1 auto;min-height:0;overflow:hidden;position:relative;}
+  .slide{position:absolute;inset:0;display:none;flex-direction:column;padding:10px 24px 4px;overflow-y:auto;}
+  .slide::-webkit-scrollbar{display:none;}
+  .slide.on{display:flex;animation:rise .3s steps(3,jump-none);}
+  @keyframes rise{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+  /* slide 1 welcome */
+  .hero1{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .hero1 .stage{position:relative;width:200px;margin-bottom:6px;}
+  .hero1 img{width:100%;image-rendering:pixelated;filter:drop-shadow(4px 5px 0 rgba(23,20,15,.22));animation:bob 3s steps(3,jump-none) infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  .hero1 .stand{margin-top:-4px;height:20px;position:relative;}
+  .hero1 .stand .s1{position:absolute;left:50%;top:0;transform:translateX(-50%);width:140px;height:11px;background:var(--pink);border:2.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);}
+  .kick{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:2px;color:var(--ink);background:var(--card);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:4px 10px;text-transform:uppercase;margin-bottom:16px;}
+  .htitle{font-family:var(--disp);font-size:34px;line-height:1.02;letter-spacing:-1.2px;color:var(--ink);}
+  .htitle .p{color:var(--pink2);}
+  .hlead{font-family:var(--ui);font-weight:700;font-size:14px;color:#4a463c;margin-top:12px;line-height:1.6;max-width:270px;}
+
+  /* slide title (shared for 2/3) */
+  .stt{font-family:var(--disp);font-size:26px;letter-spacing:-.7px;color:var(--ink);line-height:1.05;margin-bottom:4px;margin-top:6px;}
+  .ssub{font-family:var(--ui);font-weight:600;font-size:12.5px;color:#4a463c;line-height:1.55;margin-bottom:14px;}
+
+  /* slide 2: moment -> 4 objects flow */
+  .moment{background:var(--ink);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--pink);padding:12px 14px;margin-bottom:14px;}
+  .moment .ml{font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:1.5px;color:var(--sun);text-transform:uppercase;}
+  .moment p{font-family:var(--ui);font-weight:700;font-size:14px;color:var(--cream);margin-top:5px;line-height:1.45;}
+  .flow4{display:flex;flex-direction:column;gap:10px;}
+  .o{display:flex;gap:12px;align-items:center;background:var(--card);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:11px 12px;position:relative;opacity:.35;transform:translateX(10px);transition:opacity .3s steps(3,jump-none),transform .3s steps(3,jump-none);}
+  .o.lit{opacity:1;transform:none;}
+  .o .oic{width:44px;height:44px;flex:0 0 auto;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .o.o1 .oic{background:var(--pink);} .o.o2 .oic{background:var(--sun);} .o.o3 .oic{background:var(--cream);} .o.o4 .oic{background:var(--coral);}
+  .o .oc{flex:1;min-width:0;}
+  .o .oc .otag{display:flex;align-items:center;gap:7px;}
+  .o .oc b{font-family:var(--ui);font-weight:900;font-size:15px;color:var(--ink);}
+  .o .oc .en{font-family:var(--mono);font-weight:700;font-size:8.5px;color:var(--mut);letter-spacing:.3px;}
+  .o .oc small{display:block;font-family:var(--ui);font-weight:500;font-size:11.5px;color:#5a5347;margin-top:3px;line-height:1.4;}
+  .o .num{position:absolute;top:-9px;left:-9px;width:22px;height:22px;background:var(--ink);color:var(--sun);border:2px solid var(--ink);font-family:var(--disp);font-size:11px;display:flex;align-items:center;justify-content:center;}
+  .conn{text-align:center;font-family:var(--disp);font-size:16px;color:var(--pink2);line-height:.4;margin:-4px 0;opacity:.35;transition:opacity .3s;}
+  .conn.lit{opacity:1;}
+
+  /* slide 3: permissions preview */
+  .perms{display:flex;flex-direction:column;gap:10px;}
+  .perm{display:flex;gap:12px;align-items:center;background:var(--card);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:11px 12px;}
+  .perm .pic{width:38px;height:38px;flex:0 0 auto;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);background:var(--cream);}
+  .perm .pc{flex:1;min-width:0;}
+  .perm .pc b{font-family:var(--ui);font-weight:800;font-size:13px;color:var(--ink);display:block;}
+  .perm .pc small{font-family:var(--ui);font-weight:500;font-size:10.5px;color:#5a5347;display:block;margin-top:2px;line-height:1.4;}
+  .perm .later{font-family:var(--mono);font-weight:700;font-size:8.5px;color:var(--mut);border:1.5px solid var(--mut);padding:2px 6px;white-space:nowrap;flex:0 0 auto;}
+  .promise{margin-top:14px;background:var(--sun);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:11px 12px;display:flex;gap:9px;align-items:flex-start;}
+  .promise svg{flex:0 0 auto;margin-top:1px;}
+  .promise p{font-family:var(--ui);font-weight:700;font-size:12px;color:var(--ink);line-height:1.5;}
+
+  /* bottom cta */
+  .foot{flex:0 0 auto;padding:12px 20px calc(14px + env(safe-area-inset-bottom));display:flex;gap:11px;}
+  .b{cursor:pointer;user-select:none;font-family:var(--ui);font-weight:800;font-size:15px;border:3px solid var(--ink);padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .b.pink{background:var(--pink);box-shadow:5px 5px 0 var(--ink);flex:1;}
+  .b.ghost{background:var(--card);box-shadow:5px 5px 0 var(--ink);}
+  .b:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+  .b .arw{font-family:var(--disp);font-size:16px;}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="otop">
+      <div class="dots" id="dots"><i class="on"></i><i></i><i></i></div>
+      <a class="skip" href="snake-chat.html">跳过</a>
+    </div>
+
+    <div class="body">
+
+      <!-- SLIDE 1: welcome -->
+      <div class="slide on" data-s="0">
+        <div class="hero1">
+          <div class="kick">SNAKE1 · 现实里的 Agent</div>
+          <div class="stage">
+            <img src="snake/snake_cut.png" alt="Snake" />
+            <div class="stand"><div class="s1"></div></div>
+          </div>
+          <div class="htitle">嗨，我是 <span class="p">Snake</span></div>
+          <div class="hlead">你在现实里发个暗号，我就按你我商量好的预案，动用你授权的装备，回到现实帮你。</div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: one moment -> 4 objects -->
+      <div class="slide" data-s="1">
+        <div class="stt">用一个时刻，认识我</div>
+        <div class="ssub">比如这个再常见不过的瞬间——</div>
+        <div class="moment">
+          <div class="ml">A MOMENT</div>
+          <p>相亲饭局聊不下去，想走又开不了口。</p>
+        </div>
+        <div class="flow4">
+          <div class="o o3 lit" data-i="0">
+            <span class="num">1</span>
+            <div class="oic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5 H20 V15 H10 L6 19 V15 H4 Z"/></svg></div>
+            <div class="oc"><div class="otag"><b>预案</b><span class="en">PLAN</span></div><small>你和我聊出的解决方案：怕冷场就打个救急电话。</small></div>
+          </div>
+          <div class="conn" data-c="0">▼</div>
+          <div class="o o1" data-i="1">
+            <span class="num">2</span>
+            <div class="oic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="2.4" fill="#17140F" stroke="none"/><path d="M7.5 13a4.5 4.5 0 0 1 9 0M4.5 13a7.5 7.5 0 0 1 15 0"/></svg></div>
+            <div class="oc"><div class="otag"><b>暗号</b><span class="en">SIGNAL</span></div><small>桌子底下双击一下戒指，就是喊我出手的信号。</small></div>
+          </div>
+          <div class="conn" data-c="1">▼</div>
+          <div class="o o2" data-i="2">
+            <span class="num">3</span>
+            <div class="oic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></div>
+            <div class="oc"><div class="otag"><b>装备</b><span class="en">TOOL</span></div><small>我用你授权的电话，拨一通「妈妈来电」给你台阶。</small></div>
+          </div>
+          <div class="conn" data-c="2">▼</div>
+          <div class="o o4" data-i="3">
+            <span class="num">4</span>
+            <div class="oic"><img src="snake/snake_cut.png" style="width:100%;image-rendering:pixelated" alt=""></div>
+            <div class="oc"><div class="otag"><b>Snake</b><span class="en">就是我</span></div><small>我负责听懂你、拆解时刻、判断时机，把这一切串起来。</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: permission preview -->
+      <div class="slide" data-s="2">
+        <div class="stt">我会用到哪些权限</div>
+        <div class="ssub">先让你心里有数。这些<b>都不现在要</b>——等某个预案真的需要，我才会问你。</div>
+        <div class="perms">
+          <div class="perm">
+            <div class="pic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg></div>
+            <div class="pc"><b>蓝牙</b><small>连你的戒指、耳机，接收暗号</small></div>
+            <span class="later">用到再问</span>
+          </div>
+          <div class="perm">
+            <div class="pic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></div>
+            <div class="pc"><b>电话 / 消息</b><small>帮你拨救急来电、发一条报平安</small></div>
+            <span class="later">用到再问</span>
+          </div>
+          <div class="perm">
+            <div class="pic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg></div>
+            <div class="pc"><b>麦克风</b><small>仅在你发暗号后的短窗口，绝不全天监听</small></div>
+            <span class="later">用到再问</span>
+          </div>
+        </div>
+        <div class="promise">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          <p>行动前有边界、行动中能取消、行动后可解释。真实的事，永远你说了算。</p>
+        </div>
+      </div>
+
+    </div><!-- /body -->
+
+    <div class="foot">
+      <a class="b ghost" id="backBtn" href="javascript:void(0)" style="display:none" aria-label="上一步">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
+      <div class="b pink" id="nextBtn">下一步 <span class="arw">→</span></div>
+    </div>
+
+  </div></div>
+
+<script>
+(function(){
+  var slides=document.querySelectorAll('.slide'),dots=document.querySelectorAll('#dots i'),
+      nextBtn=document.getElementById('nextBtn'),backBtn=document.getElementById('backBtn');
+  var cur=0,MAX=slides.length-1,litTimer=null;
+
+  function go(n){
+    cur=n;
+    slides.forEach(function(s){s.classList.toggle('on',+s.dataset.s===cur);});
+    dots.forEach(function(d,i){d.classList.remove('on','done');if(i<cur)d.classList.add('done');else if(i===cur)d.classList.add('on');});
+    backBtn.style.display=cur===0?'none':'flex';
+    if(cur===MAX){nextBtn.innerHTML='开始，描述一个时刻 <span class="arw">→</span>';}
+    else{nextBtn.innerHTML='下一步 <span class="arw">→</span>';}
+    if(cur===1)animateFlow();
+  }
+
+  function animateFlow(){
+    var os=slides[1].querySelectorAll('.o'),cs=slides[1].querySelectorAll('.conn');
+    os.forEach(function(o,i){if(i>0)o.classList.remove('lit');});
+    cs.forEach(function(c){c.classList.remove('lit');});
+    clearTimeout(litTimer);
+    var seq=[1,2,3],k=0;
+    function lit(){
+      if(k<seq.length){
+        cs[seq[k]-1].classList.add('lit');
+        os[seq[k]].classList.add('lit');
+        k++;litTimer=setTimeout(lit,520);
+      }
+    }
+    litTimer=setTimeout(lit,350);
+  }
+
+  nextBtn.addEventListener('click',function(){
+    if(cur===MAX){location.href='snake-conversation.html';return;}
+    go(cur+1);
+  });
+  backBtn.addEventListener('click',function(){if(cur>0)go(cur-1);});
+
+  go(0);
+})();
+</script>
+</body>
+</html>

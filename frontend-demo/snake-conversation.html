@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 和Snake聊聊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:11px;padding:9px 14px 10px;flex:0 0 auto;}
+  .back{width:34px;height:34px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .back:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .hav{width:36px;height:36px;flex:0 0 auto;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);image-rendering:pixelated;background:var(--pink);}
+  .htxt{flex:1;min-width:0;}
+  .htxt b{font-family:var(--disp);font-size:16px;letter-spacing:-.4px;color:var(--ink);display:block;line-height:1;}
+  .htxt small{font-family:var(--mono);font-weight:700;font-size:9px;color:var(--ink);display:flex;align-items:center;gap:5px;margin-top:3px;}
+  .htxt small .d{width:6px;height:6px;border-radius:50%;background:var(--live);animation:blink 1.1s steps(2,jump-none) infinite;}
+  @keyframes blink{0%,55%{opacity:1}56%,100%{opacity:.2}}
+
+  /* thread */
+  .thread{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 16px 8px;display:flex;flex-direction:column;gap:12px;}
+  .thread::-webkit-scrollbar{display:none;}
+
+  .msg{display:flex;gap:9px;max-width:100%;opacity:0;transform:translateY(8px);animation:rise .25s steps(3,jump-none) forwards;}
+  @keyframes rise{to{opacity:1;transform:none;}}
+  .msg .av{width:30px;height:30px;flex:0 0 auto;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);image-rendering:pixelated;align-self:flex-end;}
+  .bub{border:2.5px solid var(--ink);padding:10px 12px;font-family:var(--ui);font-weight:600;font-size:13px;line-height:1.5;color:var(--ink);max-width:250px;}
+  /* snake left */
+  .msg.s .bub{background:var(--card);box-shadow:3px 3px 0 var(--ink);border-top-left-radius:0;}
+  /* user right */
+  .msg.u{flex-direction:row-reverse;margin-left:auto;}
+  .msg.u .bub{background:var(--pink);box-shadow:3px 3px 0 var(--ink);border-top-right-radius:0;}
+  .msg.u .av{background:var(--sun);}
+
+  /* typing indicator */
+  .typing{display:flex;gap:5px;align-items:center;padding:12px;}
+  .typing i{width:8px;height:8px;background:var(--mut);border-radius:50%;animation:tp 1s steps(2,jump-none) infinite;}
+  .typing i:nth-child(2){animation-delay:.2s;} .typing i:nth-child(3){animation-delay:.4s;}
+  @keyframes tp{0%,60%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+  /* echo (understanding) card */
+  .echo{background:var(--cream);border:2.5px dashed var(--ink);padding:10px 12px;font-size:12.5px;}
+  .echo .et{font-family:var(--mono);font-weight:700;font-size:9px;letter-spacing:1px;color:var(--pink2);text-transform:uppercase;margin-bottom:6px;}
+  .echo .er{font-family:var(--ui);font-weight:600;font-size:12px;color:#3a352c;display:flex;gap:6px;line-height:1.5;margin-top:3px;}
+  .echo .er .k{color:var(--pink2);font-weight:900;flex:0 0 auto;}
+
+  /* memory proposal */
+  .mem{background:var(--sun);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:11px 12px;}
+  .mem .mt{display:flex;align-items:center;gap:7px;font-family:var(--ui);font-weight:900;font-size:12.5px;color:var(--ink);}
+  .mem p{font-family:var(--ui);font-weight:600;font-size:11.5px;color:#3a352c;line-height:1.5;margin-top:6px;}
+  .mem .mb{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;}
+  .mem .mbtn{cursor:pointer;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--ink);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:6px 9px;background:var(--card);transition:transform .06s steps(2,jump-none),box-shadow .06s steps(2,jump-none);}
+  .mem .mbtn.on{background:var(--live);color:#fff;}
+  .mem .mbtn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  /* draft plan card */
+  .draft{background:var(--card);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--pink);overflow:hidden;}
+  .draft .dt{background:var(--ink);padding:9px 12px;display:flex;align-items:center;gap:8px;}
+  .draft .dt .tag{font-family:var(--mono);font-weight:700;font-size:8px;letter-spacing:.5px;color:var(--ink);background:var(--cream);border:1.5px solid var(--cream);padding:2px 6px;}
+  .draft .dt b{font-family:var(--disp);font-size:17px;letter-spacing:-.4px;color:var(--cream);}
+  .draft .db{padding:11px 12px;}
+  .draft .dl{display:flex;gap:9px;padding:7px 0;border-bottom:2px dashed #eee2c2;}
+  .draft .dl:last-of-type{border-bottom:0;}
+  .draft .dl .ln{width:22px;height:22px;flex:0 0 auto;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:10px;color:var(--ink);}
+  .draft .dl .ln.p{background:var(--pink);} .draft .dl .ln.y{background:var(--sun);} .draft .dl .ln.c{background:var(--cream);} .draft .dl .ln.co{background:var(--coral);}
+  .draft .dl .dc{flex:1;min-width:0;}
+  .draft .dl .dc b{font-family:var(--ui);font-weight:800;font-size:12px;color:var(--ink);display:block;}
+  .draft .dl .dc small{font-family:var(--ui);font-weight:500;font-size:10.5px;color:#5a5347;display:block;margin-top:1px;line-height:1.4;}
+  .draft .dfoot{padding:11px 12px;background:var(--cream);border-top:2.5px solid var(--ink);display:flex;gap:9px;}
+  .db-b{cursor:pointer;font-family:var(--ui);font-weight:800;font-size:13px;border:2.5px solid var(--ink);padding:11px;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .db-b.go{flex:1.5;background:var(--pink);box-shadow:3px 3px 0 var(--ink);}
+  .db-b.mod{flex:1;background:var(--card);box-shadow:3px 3px 0 var(--ink);}
+  .db-b:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink);}
+  .db-b .arw{font-family:var(--disp);font-size:14px;}
+  .draftnote{font-family:var(--mono);font-weight:700;font-size:8.5px;color:var(--mut);text-align:center;padding:0 12px 10px;letter-spacing:.3px;}
+
+  /* ===== case file (卷宗) assembling ===== */
+  .casefile{background:#EadFbf;border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);max-width:270px;position:relative;overflow:hidden;}
+  .casefile::before{content:'';position:absolute;left:20px;top:0;bottom:0;width:2px;background:repeating-linear-gradient(to bottom,var(--ink) 0 5px,transparent 5px 11px);opacity:.35;}
+  .cf-top{background:#3a2f22;padding:10px 12px 10px 26px;position:relative;}
+  .cf-top .kl{font-family:var(--mono);font-weight:700;font-size:8px;letter-spacing:2px;color:#d9b477;text-transform:uppercase;}
+  .cf-top b{font-family:var(--disp);font-size:19px;letter-spacing:-.4px;color:#f6ecd2;display:block;line-height:1.05;margin-top:2px;}
+  .cf-top .no{font-family:var(--mono);font-weight:700;font-size:8.5px;color:#c69a5e;margin-top:3px;}
+  .cf-clip{position:absolute;top:-5px;right:14px;width:16px;height:34px;border:2.5px solid #9a9488;border-bottom:none;border-radius:8px 8px 0 0;transform:rotate(8deg);z-index:4;}
+  .stamp{position:absolute;top:9px;right:34px;font-family:var(--disp);font-size:11px;letter-spacing:.5px;color:var(--red);border:2.5px solid var(--red);padding:2px 6px;transform:rotate(-11deg);opacity:0;z-index:5;}
+  .stamp.show{animation:stampin .3s steps(3,jump-none) forwards;}
+  @keyframes stampin{0%{opacity:0;transform:rotate(-11deg) scale(2.4)}70%{opacity:1;transform:rotate(-11deg) scale(.92)}100%{opacity:.92;transform:rotate(-11deg) scale(1)}}
+
+  .cf-rows{padding:6px 12px 4px 26px;}
+  .cf-item{display:flex;gap:9px;padding:8px 0;border-bottom:1.5px dashed #b6a074;position:relative;opacity:0;}
+  .cf-item:last-of-type{border-bottom:0;}
+  .cf-item.in{animation:filein .32s steps(3,jump-none) forwards;}
+  @keyframes filein{0%{opacity:0;transform:translateX(14px) rotate(1.5deg)}100%{opacity:1;transform:none}}
+  .cf-item .tab{width:24px;height:24px;flex:0 0 auto;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:9px;color:var(--ink);background:var(--card);box-shadow:1.5px 1.5px 0 var(--ink);}
+  .cf-item .tab.p{background:var(--pink);} .cf-item .tab.y{background:var(--sun);} .cf-item .tab.co{background:var(--coral);} .cf-item .tab.c{background:#f6ecd2;}
+  .cf-item .cc{flex:1;min-width:0;}
+  .cf-item .cc b{font-family:var(--ui);font-weight:800;font-size:12px;color:#2a2417;display:block;}
+  .cf-item .cc small{font-family:var(--ui);font-weight:500;font-size:10.5px;color:#5c5138;display:block;margin-top:1px;line-height:1.4;}
+  .cf-item .ok{position:absolute;right:-2px;top:8px;width:16px;height:16px;border-radius:50%;background:var(--live);border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;opacity:0;}
+  .cf-item.in .ok{animation:okpop .25s steps(2,jump-none) .18s forwards;}
+  @keyframes okpop{from{opacity:0;transform:scale(2)}to{opacity:1;transform:none}}
+
+  .cf-progress{padding:4px 12px 8px 26px;font-family:var(--mono);font-weight:700;font-size:9px;color:#7a6b46;letter-spacing:.3px;}
+  .cf-foot{padding:11px 12px 11px 26px;background:#ddceA6;border-top:2.5px solid var(--ink);display:flex;gap:9px;opacity:0;}
+  .cf-foot.show{animation:filein .3s steps(3,jump-none) forwards;}
+  .cf-b{cursor:pointer;font-family:var(--ui);font-weight:800;font-size:13px;border:2.5px solid var(--ink);padding:11px;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .cf-b.go{flex:1.5;background:var(--pink);box-shadow:3px 3px 0 var(--ink);}
+  .cf-b.mod{flex:1;background:var(--card);box-shadow:3px 3px 0 var(--ink);}
+  .cf-b:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink);}
+  .cf-b .arw{font-family:var(--disp);font-size:14px;}
+
+  /* input */
+  .composer{flex:0 0 auto;border-top:3px solid var(--ink);background:var(--card);padding:9px 12px calc(9px + env(safe-area-inset-bottom));}
+  .qreplies{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;}
+  .qreplies::-webkit-scrollbar{display:none;}
+  .qr{flex:0 0 auto;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:10.5px;color:var(--ink);background:var(--cream);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);padding:7px 10px;transition:transform .06s steps(2,jump-none),box-shadow .06s steps(2,jump-none);}
+  .qr:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .inrow{display:flex;align-items:center;gap:9px;}
+  .inrow input{flex:1;min-width:0;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);outline:0;background:var(--card);font-family:var(--ui);font-weight:600;font-size:14px;color:var(--ink);padding:10px 11px;}
+  .inrow input::placeholder{color:var(--mut);}
+  .send{width:42px;height:42px;flex:0 0 auto;background:var(--pink);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .send:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+
+  .toast{position:absolute;left:50%;bottom:120px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:40;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:320px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="head">
+      <a class="back" href="snake-chat.html" aria-label="返回">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
+      <img class="hav" src="snake/snake_cut.png" alt="" />
+      <div class="htxt">
+        <b>Snake</b>
+        <small id="hstat"><span class="d"></span>在线 · 正在帮你想办法</small>
+      </div>
+    </div>
+
+    <div class="thread" id="thread"></div>
+
+    <div class="composer">
+      <div class="qreplies" id="qreplies"></div>
+      <div class="inrow">
+        <input id="input" type="text" placeholder="继续和Snake说…" />
+        <div class="send" id="send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-6-7-2z"/></svg></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+  </div></div>
+
+<script>
+(function(){
+  var thread=document.getElementById('thread'),qwrap=document.getElementById('qreplies'),
+      input=document.getElementById('input'),hstat=document.getElementById('hstat');
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},2000);}
+  function scroll(){thread.scrollTop=thread.scrollHeight;}
+  var SNK='snake/snake_cut.png';
+
+  function userMsg(t){
+    var m=document.createElement('div');m.className='msg u';
+    m.innerHTML='<img class="av" src="snake/snake_cut.png" style="background:var(--sun)" alt=""><div class="bub">'+t+'</div>';
+    thread.appendChild(m);scroll();
+  }
+  function snakeMsg(html){
+    var m=document.createElement('div');m.className='msg s';
+    m.innerHTML='<img class="av" src="'+SNK+'" alt=""><div class="bub">'+html+'</div>';
+    thread.appendChild(m);scroll();
+  }
+  function snakeNode(node){
+    var m=document.createElement('div');m.className='msg s';
+    var av=document.createElement('img');av.className='av';av.src=SNK;
+    m.appendChild(av);m.appendChild(node);thread.appendChild(m);scroll();
+  }
+  function typing(cb,ms){
+    hstat.innerHTML='<span class="d"></span>Snake正在思考…';
+    var m=document.createElement('div');m.className='msg s';
+    m.innerHTML='<img class="av" src="'+SNK+'" alt=""><div class="bub typing"><i></i><i></i><i></i></div>';
+    thread.appendChild(m);scroll();
+    setTimeout(function(){m.remove();hstat.innerHTML='<span class="d"></span>在线 · 正在帮你想办法';cb();},ms||1100);
+  }
+  function setQuick(list){
+    qwrap.innerHTML='';
+    list.forEach(function(q){
+      var b=document.createElement('div');b.className='qr';b.textContent=q.t;
+      b.addEventListener('click',function(){q.f();});
+      qwrap.appendChild(b);
+    });
+  }
+
+  // ---- scripted conversation for 救急脱身 ----
+  var step=0;
+
+  function start(){
+    // initial moment (passed from home via ?m= or default)
+    var m='相亲饭局怕冷场，老是脱不了身';
+    try{var q=new URLSearchParams(location.search).get('m'); if(q)m=q;}catch(e){}
+    userMsg(m);
+    typing(function(){
+      snakeMsg('懂了。我先把我的理解跟你对一下，你看对不对👇');
+      typing(function(){
+        var e=document.createElement('div');e.className='bub echo';
+        e.innerHTML='<div class="et">Snake的理解</div>'+
+          '<div class="er"><span class="k">发生时</span>相亲 / 饭局，聊不下去、想走又开不了口</div>'+
+          '<div class="er"><span class="k">你想要</span>有个自然的台阶，能体面离场</div>'+
+          '<div class="er"><span class="k">不希望</span>当面拒绝显得尴尬、伤和气</div>';
+        snakeNode(e);
+        typing(function(){
+          snakeMsg('那我先问你<b>一个关键的</b>：出现这种时刻，你更想用<b>哪种方式</b>被"叫走"？');
+          setQuick([
+            {t:'来个电话',f:function(){pickTool('电话');}},
+            {t:'发条消息就行',f:function(){pickTool('消息');}},
+            {t:'你来定',f:function(){pickTool('电话');}}
+          ]);
+          step=1;
+        });
+      },1200);
+    });
+  }
+
+  function pickTool(tool){
+    setQuick([]);
+    userMsg(tool==='电话'?'来个电话吧，比较真':'发条消息就行');
+    typing(function(){
+      snakeMsg('好。那<b>谁的来电</b>你接起来最不违和？我会用这个身份拨给你。');
+      setQuick([
+        {t:'妈妈',f:function(){pickCaller('妈妈');}},
+        {t:'室友',f:function(){pickCaller('室友');}},
+        {t:'公司',f:function(){pickCaller('公司');}}
+      ]);
+      step=2;
+    });
+  }
+
+  function pickCaller(who){
+    setQuick([]);
+    userMsg(who);
+    typing(function(){
+      // memory proposal
+      var mem=document.createElement('div');mem.className='bub mem';
+      mem.innerHTML='<div class="mt">🧠 要我记住这个偏好吗？</div>'+
+        '<p>「怕冷场 → 用<b>'+who+'</b>来电解围」。记住的话，以后类似时刻我直接用，不用再问。</p>'+
+        '<div class="mb"><span class="mbtn" data-a="记住">记住</span><span class="mbtn" data-a="仅本次">仅本次使用</span><span class="mbtn" data-a="不用">不用</span></div>';
+      snakeNode(mem);
+      mem.querySelectorAll('.mbtn').forEach(function(b){
+        b.addEventListener('click',function(){
+          mem.querySelectorAll('.mbtn').forEach(function(x){x.classList.remove('on');});
+          b.classList.add('on');
+          toast(b.dataset.a==='记住'?'已记住 · 可随时在设置里删除':'好的 · '+b.dataset.a);
+          setTimeout(function(){toDraft(who);},600);
+        });
+      });
+      step=3;
+    });
+  }
+
+  function toDraft(who){
+    setQuick([]);
+    typing(function(){
+      snakeMsg('齐了！我把线索归档成一份卷宗，你边看我边立卷 📁');
+      typing(function(){
+        // build empty case file, then assemble items one by one
+        var cf=document.createElement('div');cf.className='bub casefile';cf.style.padding='0';cf.style.background='#EadFbf';
+        cf.innerHTML=
+          '<span class="cf-clip"></span>'+
+          '<div class="cf-top"><div class="kl">CASE FILE · 预案卷宗</div><b>救急脱身</b><div class="no">NO. SNK-0421 · 承办：Snake</div><span class="stamp" id="cfStamp">草稿 DRAFT</span></div>'+
+          '<div class="cf-rows" id="cfRows"></div>'+
+          '<div class="cf-progress" id="cfProg">立卷中…</div>';
+        snakeNode(cf);
+
+        var items=[
+          {t:'p',k:'暗',b:'暗号 · 双击 Ring 01',s:'戴右手食指，双击唤醒我'},
+          {t:'c',k:'判',b:'Snake判断',s:'确认在饭局时段，选「'+who+'」来电身份'},
+          {t:'co',k:'延',b:'3 秒缓冲 · 可取消',s:'给你反悔时间，倒计时内随时喊停'},
+          {t:'y',k:'装',b:'装备 · 电话',s:'用「'+who+'」来电拨给你，播报催促话术'},
+          {t:'c',k:'兜',b:'兜底',s:'没接通就改发一条消息提醒'}
+        ];
+        var rows=cf.querySelector('#cfRows'),prog=cf.querySelector('#cfProg'),i=0;
+        function fileNext(){
+          if(i<items.length){
+            var it=items[i];
+            var row=document.createElement('div');row.className='cf-item';
+            row.innerHTML='<span class="tab '+it.t+'">'+it.k+'</span><div class="cc"><b>'+it.b+'</b><small>'+it.s+'</small></div>'+
+              '<span class="ok"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5 11-12"/></svg></span>';
+            rows.appendChild(row);
+            void row.offsetWidth; row.classList.add('in');
+            prog.textContent='归档中 · '+(i+1)+'/'+items.length+' 项';
+            scroll();
+            i++;setTimeout(fileNext,560);
+          }else{
+            prog.textContent='✓ 卷宗已立 · 5/5 项归档完成';
+            document.getElementById('cfStamp').classList.add('show');
+            var foot=document.createElement('div');foot.className='cf-foot';
+            foot.innerHTML='<a class="cf-b mod" id="modBtn">再改改</a><a class="cf-b go" href="snake-plan-detail.html">确认，去测试 <span class="arw">→</span></a>';
+            cf.appendChild(foot);void foot.offsetWidth;foot.classList.add('show');
+            document.getElementById('modBtn').addEventListener('click',function(){snakeMsgUser();});
+            hstat.innerHTML='<span class="d"></span>在线 · 等你确认';
+            setQuick([
+              {t:'把延时改成 5 秒',f:function(){modDemo('延时');}},
+              {t:'话术再客气点',f:function(){modDemo('话术');}}
+            ]);
+            step=4;scroll();
+          }
+        }
+        setTimeout(fileNext,400);
+      },1100);
+    });
+  }
+  function snakeMsgUser(){ userMsg('再改改'); typing(function(){ snakeMsg('可以，你想改哪块？暗号、延时、来电身份、话术、装备或兜底都行。'); }); }
+  function modDemo(what){
+    setQuick([]);
+    userMsg(what==='延时'?'把延时改成 5 秒':'话术再客气点');
+    typing(function(){
+      snakeMsg(what==='延时'?'好，缓冲改成 <b>5 秒</b>。改完关键行动后，这条预案要重新测一遍再启用哦。':'行，话术我调得更自然些。关键行动变了，记得重新测试～');
+      setTimeout(function(){
+        snakeMsg('要现在去测试吗？点上面草稿卡里的「确认，去测试」就行。');
+      },500);
+    });
+  }
+
+  // free-text input -> gentle nudge back to flow
+  function send(){
+    var v=input.value.trim();if(!v)return;input.value='';
+    userMsg(v);
+    typing(function(){
+      if(step>=4){snakeMsg('收到～这版草稿在上面，满意就点「确认，去测试」，想改告诉我改哪块。');}
+      else{snakeMsg('嗯，我记下了。我们一步步来——先回上面那个问题，我好把预案拼准👆');}
+    });
+  }
+  document.getElementById('send').addEventListener('click',send);
+  input.addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+
+  start();
+})();
+</script>
+</body>
+</html>

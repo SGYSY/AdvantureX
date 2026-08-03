@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SNAKE1 · 账户与设置</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FCF3D6; --sun:#FBCF4B; --pink:#FF6DAE; --pink2:#FF4E9A;
+    --ink:#17140F; --card:#FFFEFA; --mut:#8A8475;
+    --amber:#F5A623; --coral:#FF7A45; --red:#E7442E; --live:#3E9E5A;
+    --disp:'Archivo Black','Noto Sans SC','PingFang SC',sans-serif;
+    --ui:'Archivo','Noto Sans SC','PingFang SC','Noto Sans SC',sans-serif;
+    --mono:'Space Mono',ui-monospace,'PingFang SC','Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#2a2622;
+    background-image:radial-gradient(circle at 1px 1px, rgba(251,207,75,.16) 1px, transparent 0);
+    background-size:24px 24px;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:26px;font-family:var(--ui);overflow:hidden;
+  }
+  .phone{
+    position:relative;width:390px;height:844px;flex:0 0 auto;
+    background:var(--ink);border-radius:46px;padding:9px;
+    box-shadow:0 0 0 2px #34302a, 0 30px 60px rgba(0,0,0,.6), 14px 14px 0 rgba(255,109,174,.32);
+  }
+  .screen{position:relative;width:100%;height:100%;background:var(--cream);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+  .statusbar{height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-family:var(--mono);font-weight:700;color:var(--ink);}
+  .statusbar .time{font-size:15px;letter-spacing:.5px;}
+  .statusbar .sys{display:flex;align-items:center;gap:7px;}
+  .statusbar svg{display:block;}
+
+  .app{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 0 30px;}
+  .app::-webkit-scrollbar{display:none;}
+
+  .head{background:var(--sun);border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:11px;padding:11px 16px 12px;}
+  .back{width:36px;height:36px;flex:0 0 auto;background:var(--card);border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);text-decoration:none;transition:transform .07s steps(2,jump-none),box-shadow .07s steps(2,jump-none);}
+  .back:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+  .htitle{font-family:var(--disp);font-size:19px;letter-spacing:-.5px;color:var(--ink);}
+
+  /* account card */
+  .acct{margin:14px 18px 0;background:var(--ink);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--pink);padding:14px;display:flex;align-items:center;gap:12px;}
+  .acct .av{width:52px;height:52px;flex:0 0 auto;border:2.5px solid var(--sun);image-rendering:pixelated;background:var(--pink);}
+  .acct .at{flex:1;min-width:0;}
+  .acct .at b{font-family:var(--disp);font-size:19px;color:var(--cream);letter-spacing:-.3px;}
+  .acct .at small{display:block;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--sun);margin-top:3px;}
+  .acct .edit{font-family:var(--mono);font-weight:700;font-size:9px;color:var(--ink);background:var(--sun);border:2px solid var(--sun);padding:5px 8px;cursor:pointer;}
+
+  .sec{margin:16px 18px 0;}
+  .sec-h{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+  .sec-h .hash{width:22px;height:22px;flex:0 0 auto;background:var(--sun);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .sec-h b{font-family:var(--ui);font-weight:900;font-size:14px;color:var(--ink);}
+
+  .win{background:var(--card);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);}
+  .item{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:2px dashed #eee2c2;cursor:pointer;transition:background .1s;}
+  .item:last-child{border-bottom:0;}
+  .item:active{background:#fff6df;}
+  .item .ic{width:34px;height:34px;flex:0 0 auto;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .item .ic.p{background:var(--pink);} .item .ic.y{background:var(--sun);} .item .ic.c{background:var(--cream);}
+  .item .it{flex:1;min-width:0;}
+  .item .it b{font-family:var(--ui);font-weight:800;font-size:13.5px;color:var(--ink);display:block;}
+  .item .it small{font-family:var(--ui);font-weight:500;font-size:11px;color:#5a5347;display:block;margin-top:2px;line-height:1.4;}
+  .item .val{font-family:var(--mono);font-weight:700;font-size:10px;color:var(--ink);background:var(--cream);border:1.5px solid var(--ink);padding:3px 6px;flex:0 0 auto;white-space:nowrap;}
+  .item .go{font-family:var(--disp);font-size:15px;color:var(--mut);flex:0 0 auto;}
+
+  /* toggle */
+  .tgl{width:44px;height:26px;flex:0 0 auto;border:2.5px solid var(--ink);background:var(--cream);position:relative;cursor:pointer;box-shadow:2px 2px 0 var(--ink);}
+  .tgl .kn{position:absolute;top:1px;left:1px;width:18px;height:18px;background:var(--ink);transition:left .12s steps(2,jump-none);}
+  .tgl.on{background:var(--live);}
+  .tgl.on .kn{left:21px;background:#fff;}
+  .tgl.lock{opacity:.55;cursor:not-allowed;}
+
+  .note{font-family:var(--ui);font-weight:600;font-size:10.5px;color:var(--mut);line-height:1.5;padding:8px 4px 0;display:flex;gap:6px;}
+  .note .b{color:var(--pink2);font-weight:900;flex:0 0 auto;}
+
+  /* danger row */
+  .item.danger .it b{color:var(--red);}
+  .item.danger .ic{background:#FDE3DC;border-color:var(--red);color:var(--red);}
+
+  .foot{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--mut);text-align:center;padding:18px 20px 4px;}
+
+  .toast{position:absolute;left:50%;bottom:40px;transform:translate(-50%,20px);background:var(--ink);color:var(--sun);font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;padding:11px 16px;border:3px solid var(--sun);opacity:0;pointer-events:none;z-index:20;white-space:nowrap;box-shadow:4px 4px 0 var(--pink);max-width:320px;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);transition:all .16s steps(3,jump-none);}
+</style>
+</head>
+<body>
+  <div class="phone"><div class="screen">
+
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="sys">
+        <svg width="19" height="12" viewBox="0 0 19 12"><g fill="#17140F"><rect x="0" y="8" width="3" height="4"/><rect x="5" y="5.5" width="3" height="6.5"/><rect x="10" y="3" width="3" height="9"/><rect x="15" y="0.5" width="3" height="11.5"/></g></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#17140F"><path d="M8.5 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.6A8.6 8.6 0 0 0 8.5 4.3 8.6 8.6 0 0 0 2.4 6.8L.9 5.2A11 11 0 0 1 8.5 2.2z"/><path d="M8.5 6.1c1.7 0 3.3.7 4.5 1.9l-1.6 1.6a4.1 4.1 0 0 0-5.8 0L4 8a6.4 6.4 0 0 1 4.5-1.9z"/><circle cx="8.5" cy="10.4" r="1.6"/></g></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3" fill="none" stroke="#17140F" stroke-width="1.4"/><rect x="2.4" y="2.4" width="15.5" height="8.2" rx="1.5" fill="#17140F"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#17140F"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <div class="head">
+        <a class="back" href="snake-chat.html" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </a>
+        <span class="htitle">账户与设置</span>
+      </div>
+
+      <!-- account -->
+      <div class="acct">
+        <img class="av" src="snake/snake_cut.png" alt="" />
+        <div class="at">
+          <b>小鱼</b>
+          <small>SNAKE1 账户 · 已登录 3 台设备</small>
+        </div>
+        <span class="edit" id="editAcct">编辑</span>
+      </div>
+
+      <!-- 个人资料 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><b>个人资料</b></div>
+        <div class="win">
+          <div class="item" data-t="称呼：可随时改，Snake用它称呼你">
+            <div class="ic p"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></div>
+            <div class="it"><b>称呼</b></div>
+            <span class="val">小鱼</span>
+          </div>
+          <div class="item" data-t="常用语言：影响Snake和你对话的语言">
+            <div class="ic y"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></div>
+            <div class="it"><b>常用语言</b></div>
+            <span class="val">简体中文</span>
+          </div>
+          <div class="item" data-t="时区变化会影响延时和定时的含义，改动前会提示">
+            <div class="ic c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <div class="it"><b>时区</b><small>改动会影响延时 / 定时含义，会先提示</small></div>
+            <span class="val">GMT+8</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Snake 记忆 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4"><path d="M12 3a5 5 0 0 0-5 5c0 2 1 3 1 5v2h8v-2c0-2 1-3 1-5a5 5 0 0 0-5-5z"/><path d="M9 20h6"/></svg></span><b>Snake 记忆</b></div>
+        <div class="win">
+          <div class="item" data-t="查看 3 条长期记忆 · 每条带来源、用途和更新时间">
+            <div class="ic p"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></div>
+            <div class="it"><b>查看与搜索记忆</b><small>怕冷场偏好 · 妈妈号码 · 到家话术</small></div>
+            <span class="val">3 条</span>
+          </div>
+          <div class="item danger" data-t="删除 / 暂停记忆后，依赖它的预案会被要求补默认值或重新确认，不会静默用旧副本">
+            <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></div>
+            <div class="it"><b>删除 / 暂停记忆</b><small>会列出需要重新确认的预案</small></div>
+            <span class="go">→</span>
+          </div>
+        </div>
+        <div class="note"><span class="b">·</span>只有你确认过的信息才进入长期记忆；删除后Snake不再用于新判断。</div>
+      </div>
+
+      <!-- 预案卷宗库 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h5l2 3h9v11H4z"/></svg></span><b>预案卷宗</b></div>
+        <a class="win" href="snake-casefile-library.html" style="display:block;text-decoration:none">
+          <div class="item">
+            <div class="ic y"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h5l2 3h9v11H4z"/><path d="M8 14h8"/></svg></div>
+            <div class="it"><b>预案卷宗库</b><small>手动加载现成卷宗 / 从文件导入</small></div>
+            <span class="val">4 份</span>
+          </div>
+        </a>
+        <div class="note"><span class="b">·</span>加载的卷宗都会作为草稿进入预案，测试通过后才启用。</div>
+      </div>
+
+      <!-- 权限中心 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4"><rect x="5" y="10" width="14" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><b>权限中心</b></div>
+        <div class="win">
+          <div class="item" data-t="蓝牙：Ring01 / 耳机连接依赖它，撤销后相关暗号不可用"><div class="ic c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg></div><div class="it"><b>蓝牙</b><small>Ring01 · 耳机</small></div><span class="val" style="color:#256b3a;border-color:#256b3a">已允许</span></div>
+          <div class="item" data-t="电话：救急脱身拨号依赖它，撤销后预案不可用"><div class="ic y"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></div><div class="it"><b>电话</b><small>救急脱身</small></div><span class="val" style="color:#256b3a;border-color:#256b3a">已允许</span></div>
+          <div class="item" data-t="麦克风：只在你主动暗号后的明确窗口采集，不做全天监听"><div class="ic p"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg></div><div class="it"><b>麦克风</b><small>仅暗号后短窗口 · 非全天监听</small></div><span class="val">未使用</span></div>
+        </div>
+        <div class="note"><span class="b">·</span>撤销任一权限前，会先说明哪些暗号、装备和预案会变得不可用。</div>
+      </div>
+
+      <!-- 通知设置 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><b>通知设置</b></div>
+        <div class="win">
+          <div class="item"><div class="it"><b>触发提醒</b><small>暗号到达 / 匹配到预案</small></div><div class="tgl on" data-k="触发提醒"><span class="kn"></span></div></div>
+          <div class="item"><div class="it"><b>延时与完成</b><small>倒计时 / 运行完成</small></div><div class="tgl on" data-k="延时与完成"><span class="kn"></span></div></div>
+          <div class="item"><div class="it"><b>设备离线 / 权限过期</b><small>依赖预案变不可用时提醒</small></div><div class="tgl on" data-k="设备离线"><span class="kn"></span></div></div>
+          <div class="item"><div class="it"><b>失败与高风险安全反馈</b><small>为你的安全，无法完全静默</small></div><div class="tgl on lock" data-k="安全反馈" data-lock="1"><span class="kn"></span></div></div>
+        </div>
+      </div>
+
+      <!-- 数据与隐私 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/></svg></span><b>数据与隐私</b></div>
+        <div class="win">
+          <div class="item" data-t="查看每类数据的保存目的和保留期限">
+            <div class="ic c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 9h8M8 13h8M8 17h4"/></svg></div>
+            <div class="it"><b>我的数据</b><small>类型 · 保存目的 · 保留期限</small></div><span class="go">→</span>
+          </div>
+          <div class="item danger" data-t="分别删除会话 / 记忆 / 执行记录 / 整个账户，避免范围误解">
+            <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></div>
+            <div class="it"><b>删除数据</b><small>会话 / 记忆 / 记录 / 账户分开处理</small></div><span class="go">→</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 设备与会话安全 -->
+      <div class="sec">
+        <div class="sec-h"><span class="hash"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.4"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M10 18h4"/></svg></span><b>设备与会话安全</b></div>
+        <div class="win">
+          <div class="item" data-t="本机 iPhone · 当前会话"><div class="ic y"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17140F" stroke-width="2.2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M10 18h4"/></svg></div><div class="it"><b>iPhone 15 · 本机</b><small>当前会话 · 广州</small></div><span class="val" style="color:#256b3a;border-color:#256b3a">在用</span></div>
+          <div class="item danger" data-t="退出其他设备不会中断已进入不可逆阶段的现实动作，但会阻止新触发">
+            <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h9"/></svg></div>
+            <div class="it"><b>退出其他 2 台设备</b><small>阻止新触发 · 不中断不可逆动作</small></div><span class="go">→</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">RAFT EDITION · 真实行动都在明确授权内发生</div>
+
+    </div><!-- /app -->
+
+    <div class="toast" id="toast"></div>
+
+  </div></div>
+
+<script>
+(function(){
+  var toastEl=document.getElementById('toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show');},2000);}
+
+  document.getElementById('editAcct').addEventListener('click',function(){toast('账户资料编辑（demo 占位）');});
+
+  document.querySelectorAll('.item[data-t]').forEach(function(it){
+    it.addEventListener('click',function(e){
+      if(e.target.closest('.tgl'))return;
+      toast(it.dataset.t);
+    });
+  });
+
+  document.querySelectorAll('.tgl').forEach(function(t){
+    t.addEventListener('click',function(){
+      if(t.dataset.lock){toast('「'+t.dataset.k+'」为安全反馈，无法完全静默');return;}
+      t.classList.toggle('on');
+      toast('「'+t.dataset.k+'」已'+(t.classList.contains('on')?'开启':'关闭'));
+    });
+  });
+})();
+</script>
+</body>
+</html>
